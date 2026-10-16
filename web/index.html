@@ -70,7 +70,7 @@
         <!-- Top Info Bar -->
         <div class="bg-[#031528] px-4 py-1.5 text-xs flex flex-wrap items-center justify-between gap-4 border-b border-white/10">
             <div class="flex items-center gap-4">
-                <span class="flex items-center gap-1.5 text-sky-teal font-semibold">
+                <span id="db-status" class="flex items-center gap-1.5 text-sky-teal font-semibold">
                     <span class="w-2 h-2 rounded-full bg-sky-teal animate-ping"></span>
                     MySQL Database: Connected
                 </span>
@@ -682,16 +682,159 @@
             };
         }
 
+        const DEMO_ACTIVE = { on: false };
+
+        function demoStamp(hhmm) {
+            const d = new Date();
+            const p = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${hhmm}:00`;
+        }
+
+        const DEMO = {
+            nextFlightId: 8,
+            nextBookingId: 4,
+            airlines: [
+                { airlineId: 1, airlineName: 'IndiGo' },
+                { airlineId: 2, airlineName: 'Air India' },
+                { airlineId: 3, airlineName: 'Vistara' },
+                { airlineId: 4, airlineName: 'SpiceJet' },
+                { airlineId: 5, airlineName: 'Emirates' }
+            ],
+            runways: [
+                { runwayId: 1, code: '1 (North)', status: 'OPEN', lengthM: 3600 },
+                { runwayId: 2, code: '2 (South)', status: 'OPEN', lengthM: 3400 },
+                { runwayId: 3, code: '3 (Main)', status: 'MAINTENANCE', lengthM: 4000 }
+            ],
+            gates: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8'].map(c => ({ code: c })),
+            flights: [
+                { flightId: 1, flightNumber: '6E-204', airline: 'IndiGo', origin: 'JAI', destination: 'GOI', departure: demoStamp('08:15'), gate: 'G1', runway: '1 (North)', aircraft: 'Airbus A320', booked: 148, capacity: 180, status: 'BOARDING' },
+                { flightId: 2, flightNumber: 'AI-101', airline: 'Air India', origin: 'JAI', destination: 'DEL', departure: demoStamp('09:40'), gate: 'G2', runway: '1 (North)', aircraft: 'Airbus A321', booked: 162, capacity: 200, status: 'SCHEDULED' },
+                { flightId: 3, flightNumber: 'UK-832', airline: 'Vistara', origin: 'JAI', destination: 'BOM', departure: demoStamp('11:05'), gate: 'G3', runway: '2 (South)', aircraft: 'Airbus A320neo', booked: 133, capacity: 180, status: 'SCHEDULED' },
+                { flightId: 4, flightNumber: '6E-611', airline: 'IndiGo', origin: 'JAI', destination: 'BLR', departure: demoStamp('12:30'), gate: 'G5', runway: '2 (South)', aircraft: 'Airbus A321neo', booked: 171, capacity: 232, status: 'DELAYED' },
+                { flightId: 5, flightNumber: 'SG-289', airline: 'SpiceJet', origin: 'JAI', destination: 'HYD', departure: demoStamp('14:00'), gate: 'G6', runway: '2 (South)', aircraft: 'Boeing 737-800', booked: 118, capacity: 186, status: 'SCHEDULED' },
+                { flightId: 6, flightNumber: 'EK-504', airline: 'Emirates', origin: 'DXB', destination: 'JAI', departure: demoStamp('16:20'), gate: 'G4', runway: '1 (North)', aircraft: 'Boeing 777-300ER', booked: 289, capacity: 354, status: 'ARRIVED' },
+                { flightId: 7, flightNumber: '6E-711', airline: 'IndiGo', origin: 'BOM', destination: 'JAI', departure: demoStamp('18:45'), gate: 'G7', runway: '2 (South)', aircraft: 'Airbus A320', booked: 96, capacity: 180, status: 'SCHEDULED' }
+            ],
+            passengers: [
+                { bookingId: 1, pnr: 'PNR7QK2', name: 'Rahul Sharma', flightNumber: '6E-204', origin: 'JAI', destination: 'GOI', seat: '14A', cabin: 'ECONOMY', baggageKg: 15, checkIn: 'CHECKED_IN' },
+                { bookingId: 2, pnr: 'PNR4XZ9', name: 'Priya Verma', flightNumber: 'AI-101', origin: 'JAI', destination: 'DEL', seat: '3C', cabin: 'BUSINESS', baggageKg: 25, checkIn: 'BOARDED' },
+                { bookingId: 3, pnr: 'PNR8MNT5', name: 'Arjun Mehta', flightNumber: 'UK-832', origin: 'JAI', destination: 'BOM', seat: '22F', cabin: 'ECONOMY', baggageKg: null, checkIn: 'NOT_CHECKED_IN' }
+            ]
+        };
+
+        function enableDemoMode() {
+            if (DEMO_ACTIVE.on) return;
+            DEMO_ACTIVE.on = true;
+            const el = document.getElementById('db-status');
+            if (el) {
+                el.className = 'flex items-center gap-1.5 text-sky-amber font-semibold';
+                el.innerHTML = '<span class="w-2 h-2 rounded-full bg-sky-amber"></span> Demo Mode: Local Sample Data';
+            }
+        }
+
+        function mockApi(path, opts = {}) {
+            const method = (opts.method || 'GET').toUpperCase();
+            const body = opts.body || {};
+            const query = new URLSearchParams((path.split('?')[1]) || '');
+
+            if (path.startsWith('/login')) {
+                if (body.username === 'admin' && body.password === 'adminpass123') {
+                    return { token: 'demo-local-token', username: 'admin' };
+                }
+                throw new Error('Invalid username or password');
+            }
+            if (path.startsWith('/me')) return { username: 'admin', role: 'ADMIN' };
+
+            if (path.startsWith('/flights/status')) {
+                const f = DEMO.flights.find(x => x.flightId === Number(body.flightId));
+                if (f) f.status = body.status;
+                return { message: 'Status updated' };
+            }
+            if (path.startsWith('/flights/cancel')) {
+                const f = DEMO.flights.find(x => x.flightId === Number(body.flightId));
+                if (f) f.status = 'CANCELLED';
+                return { message: 'Flight cancelled' };
+            }
+            if (path.startsWith('/flights') && method === 'POST') {
+                const airline = DEMO.airlines.find(a => a.airlineId === Number(body.airlineId));
+                DEMO.flights.push({
+                    flightId: DEMO.nextFlightId++,
+                    flightNumber: body.flightNumber,
+                    airline: airline ? airline.airlineName : 'IndiGo',
+                    origin: body.origin,
+                    destination: body.destination,
+                    departure: body.departure,
+                    gate: 'G1',
+                    runway: '1 (North)',
+                    aircraft: 'Airbus A320',
+                    booked: 0,
+                    capacity: 180,
+                    status: 'SCHEDULED'
+                });
+                return { message: 'Flight ' + body.flightNumber + ' saved' };
+            }
+            if (path.startsWith('/flights')) {
+                const term = (query.get('q') || '').toLowerCase();
+                const list = DEMO.flights.filter(f => !term
+                    || f.flightNumber.toLowerCase().includes(term)
+                    || f.airline.toLowerCase().includes(term)
+                    || (f.origin + ' ' + f.destination).toLowerCase().includes(term)
+                    || String(f.gate).toLowerCase().includes(term));
+                return { flights: list };
+            }
+            if (path.startsWith('/manifest')) return { passengers: DEMO.passengers };
+            if (path.startsWith('/runways')) return { runways: DEMO.runways };
+            if (path.startsWith('/gates')) return { gates: DEMO.gates };
+            if (path.startsWith('/airlines')) return { airlines: DEMO.airlines };
+
+            if (path.startsWith('/bookings') && method === 'POST') {
+                const flt = DEMO.flights.find(f => f.flightId === Number(body.flightId));
+                const pnr = 'PNR' + Math.random().toString(36).slice(2, 6).toUpperCase();
+                DEMO.passengers.push({
+                    bookingId: DEMO.nextBookingId++,
+                    pnr: pnr,
+                    name: ((body.firstName || '') + ' ' + (body.lastName || '')).trim(),
+                    flightNumber: flt ? flt.flightNumber : '—',
+                    origin: flt ? flt.origin : 'DEL',
+                    destination: flt ? flt.destination : 'BOM',
+                    seat: '—',
+                    cabin: body.cabin || 'ECONOMY',
+                    baggageKg: null,
+                    checkIn: 'NOT_CHECKED_IN'
+                });
+                return { pnr: pnr, message: 'Passenger booked' };
+            }
+            if (path.startsWith('/checkin') && method === 'POST') {
+                const p = DEMO.passengers.find(x => x.pnr === body.pnr);
+                if (p) p.checkIn = 'CHECKED_IN';
+                return { message: 'Passenger checked in' };
+            }
+            return {};
+        }
+
         async function api(path, opts = {}) {
-            const headers = {};
-            if (AUTH.token) headers['Authorization'] = 'Bearer ' + AUTH.token;
-            let body;
-            if (opts.body) { headers['Content-Type'] = 'application/x-www-form-urlencoded'; body = new URLSearchParams(opts.body).toString(); }
-            const res = await fetch('/api' + path, { method: opts.method || 'GET', headers, body });
-            let data = {};
-            try { data = await res.json(); } catch (_) { }
-            if (!res.ok) throw new Error(data.error || ('Request failed (' + res.status + ')'));
-            return data;
+            try {
+                const headers = {};
+                if (AUTH.token) headers['Authorization'] = 'Bearer ' + AUTH.token;
+                let body;
+                if (opts.body) { headers['Content-Type'] = 'application/x-www-form-urlencoded'; body = new URLSearchParams(opts.body).toString(); }
+                const res = await fetch('/api' + path, { method: opts.method || 'GET', headers, body });
+                let data = {};
+                try { data = await res.json(); } catch (_) { }
+                if (!res.ok) {
+                    const err = new Error(data.error || ('Request failed (' + res.status + ')'));
+                    err.status = res.status;
+                    throw err;
+                }
+                return data;
+            } catch (ex) {
+                const backendMissing = ex && (ex.name === 'TypeError' || [404, 405, 500, 501].includes(ex.status));
+                if (backendMissing) {
+                    enableDemoMode();
+                    return mockApi(path, opts);
+                }
+                throw ex;
+            }
         }
 
         function showLogin() {
