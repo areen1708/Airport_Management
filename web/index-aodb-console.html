@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirportOperationsPro | AODB & A-CDM Admin Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        sky: {
+                            navy: '#05203C',      /* Primary Deep Header / Sidebar / Table Head */
+                            navyLight: '#0B2D52', /* Secondary Dark Surface */
+                            blue: '#0062E3',      /* Primary Action Blue */
+                            blueHover: '#004EB8', /* Action Hover */
+                            teal: '#00A698',      /* On-Block / Cleared / SLA Met */
+                            canvas: '#F1F2F8',    /* Workspace Background */
+                            card: '#FFFFFF',      /* Panel Surface */
+                            textMain: '#161616',  /* Primary Ink */
+                            textMuted: '#545860', /* Secondary Slate */
+                            amber: '#FF7B59',     /* Ground Delay / Slot Warning */
+                            danger: '#E70866'     /* AOG / Emergency / Critical */
+                        }
+                    },
+                    boxShadow: {
+                        'panel': '0 2px 8px rgba(5, 32, 60, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F1F2F8;
+            color: #161616;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F2F8;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+        }
+        .data-grid th {
+            white-space: nowrap;
+        }
+        .data-grid td {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col font-sans antialiased overflow-hidden select-none">
+
+    <header class="bg-sky-navy text-white border-b border-white/10 z-30 shrink-0">
+        <!-- Top System Telemetry Bar -->
+        <div class="bg-[#031528] px-4 py-1.5 text-[11px] font-mono flex flex-wrap items-center justify-between gap-4 border-b border-white/10">
+            <div class="flex items-center gap-4">
+                <span class="flex items-center gap-1.5 text-sky-teal font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-sky-teal animate-ping"></span>
+                    AODB_SYNC: ONLINE (JDBC Pool: 12/20)
+                </span>
+                <span class="text-slate-400">|</span>
+                <span class="text-slate-300"><strong class="text-white">ICAO:</strong> VIDP (IGIA T1/T2/T3)</span>
+                <span class="hidden md:inline text-slate-400">|</span>
+                <span class="hidden md:inline text-slate-300"><strong class="text-sky-blue">METAR:</strong> VIDP 160630Z 28008KT 4500 HZ FEW030 29/16 Q1014 NOSIG</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-slate-300"><strong class="text-white">ACTIVE RWY:</strong> 29L (ARR) / 29R (DEP) / 11R (CAT-III)</span>
+                <span class="bg-sky-navyLight px-2 py-0.5 rounded text-white font-bold border border-white/10" id="utc-clock">UTC 06:45:12Z</span>
+            </div>
+        </div>
+
+        <!-- Primary Admin Command Header -->
+        <div class="px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-sky-blue flex items-center justify-center shadow">
+                    <i class="fa-solid fa-tower-control text-white text-base"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-extrabold text-base tracking-tight text-white">AIRPORT OPERATIONS PRO</span>
+                        <span class="text-[10px] font-mono uppercase bg-sky-teal text-white px-1.5 py-0.5 rounded font-bold">A-CDM v4.2</span>
+                    </div>
+                    <p class="text-[11px] text-slate-300 font-mono">com.areen.airport.AirportOperationsSystem • Duty Officer: ADM-409</p>
+                </div>
+            </div>
+
+            <!-- Module Switcher -->
+            <nav class="flex items-center gap-1.5 bg-sky-navyLight p-1 rounded-lg border border-white/10">
+                <button onclick="switchModule('aodb')" id="tab-aodb" class="px-3 py-1.5 rounded-md text-xs font-bold bg-sky-blue text-white transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-table-list"></i> AODB Master Flight Log
+                </button>
+                <button onclick="switchModule('apron')" id="tab-apron" class="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-truck-ramp-box"></i> Apron & GSE Turnaround
+                </button>
+                <button onclick="switchModule('slots')" id="tab-slots" class="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-road"></i> Runway & Belt Allocation
+                </button>
+                <button onclick="switchModule('sql')" id="tab-sql" class="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-database"></i> SQL Query Console
+                </button>
+                <button onclick="switchModule('java')" id="tab-java" class="px-3 py-1.5 rounded-md text-xs font-semibold text-sky-teal hover:bg-white/5 transition flex items-center gap-1.5 border border-sky-teal/30">
+                    <i class="fa-brands fa-java"></i> Java Swing Source
+                </button>
+            </nav>
+
+            <!-- Admin Dispatch Actions -->
+            <div class="flex items-center gap-2">
+                <button onclick="triggerGroundStop()" id="btn-ground-stop" class="bg-[#FFF2EE] text-[#D9532F] hover:bg-sky-amber hover:text-white border border-sky-amber/40 font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-triangle-exclamation"></i> ATC Slot Hold
+                </button>
+                <button onclick="openFlightModal()" class="bg-sky-blue hover:bg-sky-blueHover text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-plus"></i> Insert Flight Record
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Main Center Console -->
+        <main class="flex-1 flex flex-col overflow-y-auto p-4 space-y-4">
+
+            <!-- High-Density Operational Telemetry Ribbon -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div class="bg-white rounded-xl p-3 shadow-panel border-l-4 border-sky-blue">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-sky-textMuted uppercase">
+                        <span>Movements (24H)</span>
+                        <i class="fa-solid fa-plane-up text-sky-blue"></i>
+                    </div>
+                    <div class="text-xl font-extrabold font-mono text-sky-navy mt-1" id="metric-movements">8</div>
+                    <div class="text-[10px] text-sky-textMuted font-mono mt-0.5">ARR: 3 | DEP: 5</div>
+                </div>
+
+                <div class="bg-white rounded-xl p-3 shadow-panel border-l-4 border-sky-teal">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-sky-textMuted uppercase">
+                        <span>A-CDM TOBT Compliance</span>
+                        <i class="fa-solid fa-check-double text-sky-teal"></i>
+                    </div>
+                    <div class="text-xl font-extrabold font-mono text-sky-teal mt-1" id="metric-otp">87.5%</div>
+                    <div class="text-[10px] text-sky-textMuted font-mono mt-0.5">Target +/- 5m window</div>
+                </div>
+
+                <div class="bg-white rounded-xl p-3 shadow-panel border-l-4 border-sky-navy">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-sky-textMuted uppercase">
+                        <span>Contact Stands</span>
+                        <i class="fa-solid fa-bridge text-sky-navy"></i>
+                    </div>
+                    <div class="text-xl font-extrabold font-mono text-sky-navy mt-1" id="metric-stands">6 / 8</div>
+                    <div class="text-[10px] text-sky-blue font-mono font-semibold mt-0.5">2 Remote Bays Free</div>
+                </div>
+
+                <div class="bg-white rounded-xl p-3 shadow-panel border-l-4 border-sky-blue">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-sky-textMuted uppercase">
+                        <span>GSE & Fuel Trucks</span>
+                        <i class="fa-solid fa-gas-pump text-sky-blue"></i>
+                    </div>
+                    <div class="text-xl font-extrabold font-mono text-sky-navy mt-1">18 / 22</div>
+                    <div class="text-[10px] text-sky-teal font-mono font-semibold mt-0.5">Hydrant Pressure OK</div>
+                </div>
+
+                <div class="bg-white rounded-xl p-3 shadow-panel border-l-4 border-sky-amber">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-sky-textMuted uppercase">
+                        <span>Avg Turnaround</span>
+                        <i class="fa-solid fa-rotate text-sky-amber"></i>
+                    </div>
+                    <div class="text-xl font-extrabold font-mono text-sky-navy mt-1">44m</div>
+                    <div class="text-[10px] text-[#D9532F] font-mono font-semibold mt-0.5">1 Widebody SLA Breach</div>
+                </div>
+
+                <div class="bg-white rounded-xl p-3 shadow-panel border-l-4 border-sky-danger">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-sky-textMuted uppercase">
+                        <span>Active Alerts / AOG</span>
+                        <i class="fa-solid fa-bell text-sky-danger"></i>
+                    </div>
+                    <div class="text-xl font-extrabold font-mono text-sky-danger mt-1" id="metric-alerts">1</div>
+                    <div class="text-[10px] text-sky-danger font-mono font-semibold mt-0.5">Stand G18 APU Fault</div>
+                </div>
+            </div>
+
+            <!-- MODULE 1: AODB MASTER FLIGHT LOG (High-Density Tabular Grid) -->
+            <section id="mod-aodb" class="flex-1 flex flex-col bg-white rounded-xl shadow-panel border border-slate-200/80 overflow-hidden">
+                <!-- Filter & Command Bar -->
+                <div class="bg-sky-navy px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input id="aodb-search" oninput="renderAodbTable()" type="text" placeholder="Filter Callsign, Reg (VT-...), Stand, Route..." class="bg-white text-sky-textMain pl-8 pr-3 py-1.5 rounded-lg text-xs font-semibold w-64 focus:outline-none">
+                        </div>
+
+                        <select id="aodb-mov" onchange="renderAodbTable()" class="bg-sky-navyLight text-white border border-white/15 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none">
+                            <option value="ALL">Movement: ALL (ARR/DEP)</option>
+                            <option value="DEP">DEP • Departures Only</option>
+                            <option value="ARR">ARR • Arrivals Only</option>
+                        </select>
+
+                        <select id="aodb-term" onchange="renderAodbTable()" class="bg-sky-navyLight text-white border border-white/15 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none">
+                            <option value="ALL">Terminal: All (T1/T2/T3)</option>
+                            <option value="T1">T1 (Domestic LCC)</option>
+                            <option value="T2">T2 (Domestic Full)</option>
+                            <option value="T3">T3 (Intl & Widebody)</option>
+                        </select>
+
+                        <select id="aodb-state" onchange="renderAodbTable()" class="bg-sky-navyLight text-white border border-white/15 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none">
+                            <option value="ALL">Handling State: All</option>
+                            <option value="ON BLOCK">ON BLOCK / Turnaround</option>
+                            <option value="BOARDING">BOARDING / Gate Open</option>
+                            <option value="READY TOBT">READY TOBT (Pushback)</option>
+                            <option value="DELAYED">DELAYED / Tech Hold</option>
+                            <option value="AOG">AOG / Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-xs text-slate-300 font-mono">
+                        <span>Click any row to open <strong class="text-white">Ground Dispatch Inspector</strong></span>
+                    </div>
+                </div>
+
+                <!-- Dense AODB Data Table -->
+                <div class="overflow-x-auto flex-1">
+                    <table class="w-full text-left border-collapse data-grid">
+                        <thead>
+                            <tr class="bg-[#0B2D52] text-slate-200 text-[11px] font-mono uppercase tracking-wider border-b border-slate-300">
+                                <th class="py-2.5 px-3">MOV</th>
+                                <th class="py-2.5 px-3">Callsign</th>
+                                <th class="py-2.5 px-3">Tail Reg / Type</th>
+                                <th class="py-2.5 px-3">Sector</th>
+                                <th class="py-2.5 px-3">SOBT / SIBT</th>
+                                <th class="py-2.5 px-3">TOBT (Target)</th>
+                                <th class="py-2.5 px-3">Stand / Pier</th>
+                                <th class="py-2.5 px-3">Rwy / Belt</th>
+                                <th class="py-2.5 px-3">GSE Readiness (F/C/B/C)</th>
+                                <th class="py-2.5 px-3">Pax / Cargo</th>
+                                <th class="py-2.5 px-3">A-CDM State</th>
+                                <th class="py-2.5 px-3 text-right">Quick Dispatch</th>
+                            </tr>
+                        </thead>
+                        <tbody id="aodb-tbody" class="divide-y divide-slate-200 text-xs">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- MODULE 2: APRON & GSE TURNAROUND MATRIX -->
+            <section id="mod-apron" class="hidden space-y-4">
+                <div class="bg-white rounded-xl p-4 shadow-panel border border-slate-200">
+                    <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                        <div>
+                            <h2 class="text-sm font-extrabold text-sky-navy uppercase tracking-wide">Apron Contact Stand & Ground Support Equipment (GSE) Matrix</h2>
+                            <p class="text-xs text-sky-textMuted">Toggle Ground Power (GPU), Fueling, Catering, and Baggage loading per aircraft bay</p>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs font-bold">
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-teal"></span> SLA Normal</span>
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-amber"></span> Turnaround Tight</span>
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-danger"></span> AOG / Fault</span>
+                        </div>
+                    </div>
+                    <div id="apron-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- MODULE 3: RUNWAY & BAGGAGE CAROUSEL ALLOCATION -->
+            <section id="mod-slots" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="bg-white rounded-xl p-4 shadow-panel border border-slate-200">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div>
+                            <h3 class="text-sm font-extrabold text-sky-navy uppercase">Runway Slot Sequencing (ATC CTOT)</h3>
+                            <p class="text-xs text-sky-textMuted">Calculated Take-Off Time & Wake Turbulence Separation</p>
+                        </div>
+                        <span class="text-xs font-mono font-bold px-2.5 py-1 rounded bg-sky-navy text-white">RWY 29R / 29L</span>
+                    </div>
+                    <div id="rwy-sequence-list" class="space-y-2.5 mt-3">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl p-4 shadow-panel border border-slate-200">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div>
+                            <h3 class="text-sm font-extrabold text-sky-navy uppercase">Baggage Make-Up & Reclaim Carousels</h3>
+                            <p class="text-xs text-sky-textMuted">BHS Conveyor Loop Load & Chute Assignment</p>
+                        </div>
+                        <span class="text-xs font-mono font-bold px-2.5 py-1 rounded bg-sky-teal text-white">BHS ONLINE</span>
+                    </div>
+                    <div id="baggage-list" class="space-y-2.5 mt-3">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- MODULE 4: SQL DATABASE ADMIN CONSOLE -->
+            <section id="mod-sql" class="hidden space-y-4">
+                <div class="bg-white rounded-xl p-5 shadow-panel border border-slate-200">
+                    <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
+                        <div>
+                            <span class="text-[11px] font-mono font-bold text-sky-blue">AirportOperationsPro/sql/advanced_reports.sql</span>
+                            <h2 class="text-base font-extrabold text-sky-navy">AODB Relational Database Query Executor</h2>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="executeAdminSql('turnaround')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-blue text-white hover:bg-sky-blueHover transition">
+                                Turnaround SLA Audit
+                            </button>
+                            <button onclick="executeAdminSql('stand_conflict')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-navy text-white hover:bg-sky-navyLight transition">
+                                Stand Conflict Check
+                            </button>
+                            <button onclick="executeAdminSql('ddl')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-canvas text-sky-navy border border-slate-300 hover:bg-slate-200 transition">
+                                View DDL Schema
+                            </button>
+                        </div>
+                    </div>
+                    <div id="sql-admin-output" class="mt-4"></div>
+                </div>
+            </section>
+
+            <!-- MODULE 5: JAVA SWING ADMIN CONSOLE CODE -->
+            <section id="mod-java" class="hidden space-y-4">
+                <div class="bg-white rounded-xl p-5 shadow-panel border border-slate-200">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                        <div>
+                            <span class="text-xs font-mono font-bold text-sky-teal">src/main/java/com/areen/airport/AirportOperationsSystem.java</span>
+                            <h2 class="text-base font-extrabold text-sky-navy">Java Swing AODB Admin Theme Configuration</h2>
+                            <p class="text-xs text-sky-textMuted">Copy these exact `Color` constants and table renderers into your Java Swing admin application to apply this color palette.</p>
+                        </div>
+                        <button onclick="copyJavaTheme()" class="bg-sky-blue hover:bg-sky-blueHover text-white font-bold px-4 py-2 rounded-lg text-xs transition flex items-center gap-2 shadow-sm">
+                            <i class="fa-regular fa-copy"></i> <span id="copy-java-label">Copy Java Swing Theme Code</span>
+                        </button>
+                    </div>
+                    <pre id="java-source-code" class="bg-sky-navy text-slate-100 p-4 rounded-xl font-mono text-xs overflow-x-auto leading-relaxed border border-sky-blue/30"><code>package com.areen.airport;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.JTableHeader;
+import java.awt.*;
+
+/**
+ * AirportOperationsSystem - AODB Admin Control Center Color Theme
+ * Palette: Deep Navy (#05203C), Action Blue (#0062E3), Canvas (#F1F2F8), Emerald Teal (#00A698)
+ */
+public class AirportOperationsSystem extends JFrame {
+
+    // === CORE ADMIN THEME PALETTE ===
+    public static final Color SKY_NAVY       = new Color(5, 32, 60);     // #05203C - Command Header & Sidebar
+    public static final Color SKY_NAVY_LIGHT = new Color(11, 45, 82);    // #0B2D52 - Table Header & Subbar
+    public static final Color SKY_BLUE       = new Color(0, 98, 227);    // #0062E3 - Primary Dispatch Action
+    public static final Color SKY_BLUE_HOVER = new Color(0, 78, 184);    // #004EB8 - Button Rollover
+    public static final Color SKY_TEAL       = new Color(0, 166, 152);   // #00A698 - TOBT Ready / SLA Met
+    public static final Color SKY_CANVAS     = new Color(241, 242, 248); // #F1F2F8 - Main Background
+    public static final Color SKY_CARD       = new Color(255, 255, 255); // #FFFFFF - Grid & Panel Surface
+    public static final Color SKY_TEXT_MAIN  = new Color(22, 22, 22);    // #161616 - Primary Data Ink
+    public static final Color SKY_TEXT_MUTED = new Color(84, 88, 96);    // #545860 - Secondary Labels
+    public static final Color SKY_AMBER      = new Color(255, 123, 89);  // #FF7B59 - Slot Hold / Delay
+    public static final Color SKY_DANGER     = new Color(231, 8, 102);   // #E70866 - AOG / Critical Alert
+
+    public static void initAdminTheme() {
+        UIManager.put("Panel.background", SKY_CANVAS);
+        UIManager.put("Table.background", SKY_CARD);
+        UIManager.put("Table.foreground", SKY_TEXT_MAIN);
+        UIManager.put("Table.selectionBackground", new Color(232, 241, 253));
+        UIManager.put("Table.selectionForeground", SKY_NAVY);
+        UIManager.put("Table.gridColor", new Color(226, 232, 240));
+    }
+
+    public static void configureAodbTable(JTable table) {
+        table.setRowHeight(32);
+        table.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        JTableHeader header = table.getTableHeader();
+        header.setBackground(SKY_NAVY_LIGHT);
+        header.setForeground(Color.WHITE);
+        header.setFont(new Font("SansSerif", Font.BOLD, 12));
+    }
+}</code></pre>
+                </div>
+            </section>
+        </main>
+
+        <aside id="inspector-drawer" class="w-80 lg:w-96 bg-white border-l border-slate-200 flex flex-col shrink-0 shadow-xl">
+            <div class="bg-sky-navy text-white p-4 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] font-mono uppercase tracking-wider text-sky-teal font-bold">A-CDM Turnaround Inspector</span>
+                    <h3 class="text-sm font-extrabold mt-0.5" id="insp-title">Select Flight Movement</h3>
+                </div>
+                <span id="insp-mov-badge" class="text-xs font-mono font-bold px-2.5 py-1 rounded bg-sky-blue text-white">DEP</span>
+            </div>
+
+            <div id="inspector-body" class="p-4 flex-1 overflow-y-auto space-y-4">
+                <!-- Populated dynamically when clicking a flight row -->
+            </div>
+
+            <!-- Live Operations Log Ticker at Bottom of Sidebar -->
+            <div class="border-t border-slate-200 bg-sky-canvas p-3">
+                <div class="text-[10px] font-mono font-bold uppercase text-sky-navy mb-1.5 flex items-center justify-between">
+                    <span>AODB Event Audit Log</span>
+                    <span class="text-sky-teal">LIVE</span>
+                </div>
+                <div id="audit-log" class="space-y-1 max-h-28 overflow-y-auto text-[11px] font-mono text-sky-textMuted">
+                    <div>[06:42Z] AI-111 GPU connected @ Stand G12</div>
+                    <div>[06:40Z] SQ-403 APU Fault logged -> Stand G18</div>
+                    <div>[06:38Z] 6E-2045 TOBT confirmed by Ramp Agent</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div id="flight-modal" class="fixed inset-0 bg-sky-navy/75 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-lg w-full p-5 shadow-2xl border border-slate-200">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-sky-blue text-white flex items-center justify-center">
+                        <i class="fa-solid fa-plane-circle-plus"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-sky-navy text-sm uppercase">Insert AODB Flight Movement</h3>
+                        <p class="text-[11px] text-sky-textMuted font-mono">COMMIT INTO aodb_movements</p>
+                    </div>
+                </div>
+                <button onclick="closeFlightModal()" class="text-slate-400 hover:text-sky-navy">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleAddMovement(event)" class="space-y-3 mt-4 text-xs">
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block font-bold text-sky-textMuted uppercase mb-1">Movement</label>
+                        <select id="f-mov" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 font-bold">
+                            <option value="DEP">DEP (Departure)</option>
+                            <option value="ARR">ARR (Arrival)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted uppercase mb-1">Callsign</label>
+                        <input id="f-callsign" required placeholder="AI-308" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 font-mono font-bold uppercase">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted uppercase mb-1">Tail Reg</label>
+                        <input id="f-reg" required placeholder="VT-ALN" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 font-mono font-bold uppercase">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block font-bold text-sky-textMuted uppercase mb-1">Aircraft ICAO</label>
+                        <input id="f-ac" required value="B788" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 font-mono font-bold uppercase">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted uppercase mb-1">Route Sector</label>
+                        <input id="f-route" required placeholder="DEL-NRT" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 font-mono font-bold uppercase">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted uppercase mb-1">SOBT / SIBT</label>
+                        <input id="f-sobt" type="time" value="14:20" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 font-mono font-bold">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block font-bold text-sky-textMuted uppercase mb-1">Terminal</label>
+                        <select id="f-term" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 font-bold">
+                            <option value="T3">T3 (Intl)</option>
+                            <option value="T2">T2 (Dom)</option>
+                            <option value="T1">T1 (LCC)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted uppercase mb-1">Stand / Bay</label>
+                        <input id="f-stand" required value="G15" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 font-mono font-bold uppercase">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted uppercase mb-1">Runway</label>
+                        <select id="f-rwy" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 font-mono font-bold">
+                            <option value="29R">29R</option>
+                            <option value="29L">29L</option>
+                            <option value="11R">11R</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onclick="closeFlightModal()" class="px-4 py-2 rounded-lg font-bold text-sky-textMuted hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg font-bold bg-sky-blue hover:bg-sky-blueHover text-white">Commit to AODB</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-sky-navy text-white px-4 py-2.5 rounded-lg shadow-xl border border-sky-blue text-xs font-mono font-bold flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-200 z-50">
+        <i class="fa-solid fa-terminal text-sky-teal"></i>
+        <span id="toast-msg">AODB Command Executed</span>
+    </div>
+
+    <script>
+        const aodbFlights = [
+            {
+                id: 101, mov: 'DEP', callsign: 'AI-111', operator: 'Air India', reg: 'VT-ALQ', acType: 'B77W (Heavy)',
+                route: 'DEL → LHR', term: 'T3', stand: 'G12', rwy: '29R', belt: 'MU-04',
+                sobt: '06:35', tobt: '06:35', ctot: '06:42', pax: 318, cap: 342, cargoKg: 14200,
+                state: 'READY TOBT',
+                gse: { fuel: true, catering: true, baggage: true, cleaning: true, gpu: 'CONNECTED', pushback: 'ASSIGNED (TUG-04)' }
+            },
+            {
+                id: 102, mov: 'DEP', callsign: '6E-2045', operator: 'IndiGo', reg: 'VT-IUX', acType: 'A21N (Med)',
+                route: 'DEL → BOM', term: 'T1', stand: 'A04', rwy: '29R', belt: 'MU-11',
+                sobt: '07:15', tobt: '07:12', ctot: '07:20', pax: 214, cap: 222, cargoKg: 3100,
+                state: 'BOARDING',
+                gse: { fuel: true, catering: true, baggage: false, cleaning: true, gpu: 'CONNECTED', pushback: 'STANDBY' }
+            },
+            {
+                id: 103, mov: 'ARR', callsign: 'EK-516', operator: 'Emirates', reg: 'A6-EOT', acType: 'B77W (Heavy)',
+                route: 'DXB → DEL', term: 'T3', stand: 'G04', rwy: '29L', belt: 'CL-07',
+                sobt: '07:40', tobt: '07:38', ctot: '07:38', pax: 348, cap: 354, cargoKg: 18500,
+                state: 'ON BLOCK',
+                gse: { fuel: false, catering: false, baggage: true, cleaning: true, gpu: 'CONNECTED', pushback: 'N/A (INBOUND)' }
+            },
+            {
+                id: 104, mov: 'DEP', callsign: 'SQ-403', operator: 'Singapore Airlines', reg: '9V-SKT', acType: 'A388 (Super)',
+                route: 'DEL → SIN', term: 'T3', stand: 'G18', rwy: '11R', belt: 'MU-01',
+                sobt: '08:55', tobt: '09:40', ctot: '09:50', pax: 431, cap: 471, cargoKg: 21400,
+                state: 'AOG',
+                gse: { fuel: false, catering: true, baggage: false, cleaning: true, gpu: 'EXT DUAL GPU', pushback: 'HOLD (APU FAULT)' }
+            },
+            {
+                id: 105, mov: 'ARR', callsign: 'BA-257', operator: 'British Airways', reg: 'G-ZBKP', acType: 'B789 (Heavy)',
+                route: 'LHR → DEL', term: 'T3', stand: 'G14', rwy: '29L', belt: 'CL-02',
+                sobt: '09:15', tobt: '09:10', ctot: '09:10', pax: 204, cap: 216, cargoKg: 11800,
+                state: 'ON BLOCK',
+                gse: { fuel: true, catering: false, baggage: false, cleaning: false, gpu: 'CONNECTED', pushback: 'STANDBY' }
+            },
+            {
+                id: 106, mov: 'DEP', callsign: 'UK-945', operator: 'Vistara', reg: 'VT-TNY', acType: 'A20N (Med)',
+                route: 'DEL → BLR', term: 'T3', stand: 'G09', rwy: '29R', belt: 'MU-08',
+                sobt: '10:05', tobt: '10:25', ctot: '10:32', pax: 164, cap: 180, cargoKg: 4200,
+                state: 'DELAYED',
+                gse: { fuel: true, catering: false, baggage: false, cleaning: true, gpu: 'CONNECTED', pushback: 'UNASSIGNED' }
+            },
+            {
+                id: 107, mov: 'DEP', callsign: 'LH-761', operator: 'Lufthansa', reg: 'D-AIMH', acType: 'A359 (Heavy)',
+                route: 'DEL → FRA', term: 'T3', stand: 'G02', rwy: '29R', belt: 'MU-03',
+                sobt: '11:20', tobt: '11:20', ctot: '11:28', pax: 281, cap: 293, cargoKg: 15900,
+                state: 'ON BLOCK',
+                gse: { fuel: true, catering: true, baggage: false, cleaning: true, gpu: 'CONNECTED', pushback: 'ASSIGNED (TUG-01)' }
+            },
+            {
+                id: 108, mov: 'ARR', callsign: 'QP-114', operator: 'Akasa Air', reg: 'VT-YAE', acType: 'B38M (Med)',
+                route: 'AMD → DEL', term: 'T2', stand: 'B04', rwy: '29L', belt: 'CL-12',
+                sobt: '11:45', tobt: '11:42', ctot: '11:42', pax: 176, cap: 189, cargoKg: 1900,
+                state: 'ON BLOCK',
+                gse: { fuel: true, catering: true, baggage: true, cleaning: true, gpu: 'APU RUNNING', pushback: 'STANDBY' }
+            }
+        ];
+
+        let selectedFlightId = 101;
+        let groundStopActive = false;
+
+        function getStateBadge(state) {
+            switch (state) {
+                case 'READY TOBT':
+                    return 'bg-[#E6F6F5] text-[#008277] border-[#00A698]/40';
+                case 'BOARDING':
+                    return 'bg-[#E8F1FD] text-sky-blue border-sky-blue/40';
+                case 'ON BLOCK':
+                    return 'bg-slate-100 text-sky-navy border-slate-300';
+                case 'DELAYED':
+                    return 'bg-[#FFF2EE] text-[#D9532F] border-[#FF7B59]/40';
+                case 'AOG':
+                    return 'bg-[#FCE8F0] text-sky-danger border-sky-danger/40 animate-pulse';
+                default:
+                    return 'bg-slate-100 text-slate-700';
+            }
+        }
+
+        function renderAodbTable() {
+            const tbody = document.getElementById('aodb-tbody');
+            const search = document.getElementById('aodb-search').value.toLowerCase().trim();
+            const mov = document.getElementById('aodb-mov').value;
+            const term = document.getElementById('aodb-term').value;
+            const state = document.getElementById('aodb-state').value;
+
+            const filtered = aodbFlights.filter(f => {
+                const matchSearch = !search ||
+                    f.callsign.toLowerCase().includes(search) ||
+                    f.reg.toLowerCase().includes(search) ||
+                    f.stand.toLowerCase().includes(search) ||
+                    f.route.toLowerCase().includes(search);
+                const matchMov = mov === 'ALL' || f.mov === mov;
+                const matchTerm = term === 'ALL' || f.term === term;
+                const matchState = state === 'ALL' || f.state === state;
+                return matchSearch && matchMov && matchTerm && matchState;
+            });
+
+            tbody.innerHTML = filtered.map(f => {
+                const isSelected = f.id === selectedFlightId;
+                const movBadge = f.mov === 'DEP'
+                    ? 'bg-sky-navy text-white'
+                    : 'bg-sky-teal text-white';
+
+                const dot = (done, label) => `<span title="${label}" class="w-5 h-5 rounded text-[10px] font-mono font-bold inline-flex items-center justify-center ${done ? 'bg-sky-teal text-white' : 'bg-slate-200 text-slate-500'}">${label[0]}</span>`;
+
+                return `
+                <tr onclick="selectFlight(${f.id})" class="cursor-pointer transition ${isSelected ? 'bg-[#E8F1FD]/80 font-semibold' : 'hover:bg-sky-canvas/70'}">
+                    <td class="py-2.5 px-3">
+                        <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded ${movBadge}">${f.mov}</span>
+                    </td>
+                    <td class="py-2.5 px-3 font-mono font-extrabold text-sky-navy">
+                        ${f.callsign}
+                        <div class="text-[10px] font-sans font-normal text-sky-textMuted">${f.operator}</div>
+                    </td>
+                    <td class="py-2.5 px-3 font-mono">
+                        <span class="font-bold text-sky-navy">${f.reg}</span>
+                        <div class="text-[10px] text-sky-textMuted">${f.acType}</div>
+                    </td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-sky-blue">${f.route}</td>
+                    <td class="py-2.5 px-3 font-mono text-sky-navy font-bold">${f.sobt}Z</td>
+                    <td class="py-2.5 px-3 font-mono">
+                        <span class="font-bold ${f.tobt > f.sobt ? 'text-[#D9532F]' : 'text-sky-teal'}">${f.tobt}Z</span>
+                        <div class="text-[10px] text-sky-textMuted">CTOT: ${f.ctot}Z</div>
+                    </td>
+                    <td class="py-2.5 px-3 font-mono">
+                        <span class="px-2 py-0.5 rounded bg-sky-navy text-white font-bold text-[11px]">${f.term} • ${f.stand}</span>
+                    </td>
+                    <td class="py-2.5 px-3 font-mono text-sky-navy">
+                        <div>RWY ${f.rwy}</div>
+                        <div class="text-[10px] text-sky-textMuted">${f.belt}</div>
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <div class="flex items-center gap-1">
+                            ${dot(f.gse.fuel, 'Fueling')}
+                            ${dot(f.gse.catering, 'Catering')}
+                            ${dot(f.gse.baggage, 'Baggage')}
+                            ${dot(f.gse.cleaning, 'Cabin Cleaning')}
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-3 font-mono">
+                        <span class="font-bold text-sky-navy">${f.pax}/${f.cap}</span>
+                        <div class="text-[10px] text-sky-textMuted">${(f.cargoKg/1000).toFixed(1)}t Cargo</div>
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold border ${getStateBadge(f.state)}">
+                            ${f.state}
+                        </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right" onclick="event.stopPropagation()">
+                        <button onclick="cycleState(${f.id})" class="bg-sky-blue hover:bg-sky-blueHover text-white font-bold px-2.5 py-1 rounded text-[11px] transition">
+                            Step CDM
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            updateMetrics();
+            renderInspector();
+        }
+
+        function selectFlight(id) {
+            selectedFlightId = id;
+            renderAodbTable();
+        }
+
+        function renderInspector() {
+            const f = aodbFlights.find(item => item.id === selectedFlightId) || aodbFlights[0];
+            if (!f) return;
+
+            document.getElementById('insp-title').textContent = `${f.callsign} • ${f.reg} (${f.stand})`;
+            const badge = document.getElementById('insp-mov-badge');
+            badge.textContent = f.mov;
+            badge.className = `text-xs font-mono font-bold px-2.5 py-1 rounded ${f.mov === 'DEP' ? 'bg-sky-blue text-white' : 'bg-sky-teal text-white'}`;
+
+            const gseBtn = (key, label, icon) => {
+                const active = f.gse[key];
+                return `
+                <button onclick="toggleGse(${f.id}, '${key}')" class="p-2.5 rounded-lg border text-left transition flex items-center justify-between ${active ? 'bg-[#E6F6F5] border-sky-teal text-sky-navy' : 'bg-sky-canvas border-slate-200 text-sky-textMuted'}">
+                    <span class="text-xs font-bold flex items-center gap-2">
+                        <i class="fa-solid ${icon} ${active ? 'text-sky-teal' : 'text-slate-400'}"></i> ${label}
+                    </span>
+                    <span class="text-[10px] font-mono font-extrabold px-1.5 py-0.5 rounded ${active ? 'bg-sky-teal text-white' : 'bg-slate-300 text-slate-700'}">
+                        ${active ? 'DONE' : 'PEND'}
+                    </span>
+                </button>`;
+            };
+
+            document.getElementById('inspector-body').innerHTML = `
+                <!-- Flight Technical Metadata -->
+                <div class="bg-sky-canvas rounded-xl p-3 border border-slate-200 space-y-2 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-sky-textMuted font-medium">Airframe / Wake:</span>
+                        <span class="font-mono font-bold text-sky-navy">${f.acType}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sky-textMuted font-medium">Route Sector:</span>
+                        <span class="font-mono font-bold text-sky-blue">${f.route}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sky-textMuted font-medium">SOBT / TOBT / CTOT:</span>
+                        <span class="font-mono font-bold text-sky-navy">${f.sobt}Z / ${f.tobt}Z / ${f.ctot}Z</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sky-textMuted font-medium">GPU / Pushback Tug:</span>
+                        <span class="font-mono font-bold text-sky-teal">${f.gse.pushback}</span>
+                    </div>
+                </div>
+
+                <!-- GSE Turnaround Checklist -->
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-sky-textMuted mb-2">Ground Handling SLA Checklist (Click to Toggle)</label>
+                    <div class="grid grid-cols-1 gap-2">
+                        ${gseBtn('fuel', 'Aviation Hydrant Fueling', 'fa-gas-pump')}
+                        ${gseBtn('catering', 'High-Lift Galley Catering', 'fa-utensils')}
+                        ${gseBtn('baggage', 'ULD Container / Bulk Load', 'fa-suitcase-rolling')}
+                        ${gseBtn('cleaning', 'Cabin Turnaround & Water', 'fa-broom')}
+                    </div>
+                </div>
+
+                <!-- Stand & Runway Reassignment Controls -->
+                <div class="pt-2 border-t border-slate-200 space-y-3">
+                    <label class="block text-[11px] font-bold uppercase text-sky-textMuted">Apron Stand & Runway Dispatch</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <span class="text-[10px] font-bold text-sky-textMuted">Assign Contact Stand</span>
+                            <select onchange="updateFlightField(${f.id}, 'stand', this.value)" class="mt-1 w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono font-bold text-sky-navy">
+                                ${['G02', 'G04', 'G09', 'G12', 'G14', 'G18', 'A04', 'B04'].map(s => `<option value="${s}" ${f.stand === s ? 'selected' : ''}>Stand ${s}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-bold text-sky-textMuted">Active Runway</span>
+                            <select onchange="updateFlightField(${f.id}, 'rwy', this.value)" class="mt-1 w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono font-bold text-sky-navy">
+                                ${['29R', '29L', '11R', '11L'].map(r => `<option value="${r}" ${f.rwy === r ? 'selected' : ''}>RWY ${r}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button onclick="approvePushback(${f.id})" class="bg-sky-teal hover:bg-[#008f82] text-white font-bold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-Check"></i> Clear Pushback
+                        </button>
+                        <button onclick="flagAog(${f.id})" class="bg-[#FCE8F0] hover:bg-sky-danger hover:text-white text-sky-danger font-bold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-wrench"></i> Flag Tech AOG
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleGse(id, key) {
+            const f = aodbFlights.find(item => item.id === id);
+            if (!f) return;
+            f.gse[key] = !f.gse[key];
+            logAudit(`${f.callsign} GSE [${key.toUpperCase()}] -> ${f.gse[key] ? 'COMPLETED' : 'PENDING'}`);
+            renderAodbTable();
+            renderApronGrid();
+        }
+
+        function updateFlightField(id, field, value) {
+            const f = aodbFlights.find(item => item.id === id);
+            if (!f) return;
+            f[field] = value;
+            logAudit(`${f.callsign} reassigned ${field.toUpperCase()} -> ${value}`);
+            showToast(`${f.callsign}: ${field.toUpperCase()} updated to ${value}`);
+            renderAodbTable();
+            renderSlotsAndBaggage();
+        }
+
+        function approvePushback(id) {
+            const f = aodbFlights.find(item => item.id === id);
+            if (!f) return;
+            f.state = 'READY TOBT';
+            f.gse.fuel = f.gse.catering = f.gse.baggage = f.gse.cleaning = true;
+            logAudit(`${f.callsign} TOBT approved • Cleared for pushback Stand ${f.stand}`);
+            showToast(`${f.callsign} cleared for pushback & startup`);
+            renderAodbTable();
+        }
+
+        function flagAog(id) {
+            const f = aodbFlights.find(item => item.id === id);
+            if (!f) return;
+            f.state = 'AOG';
+            logAudit(`ALERT: ${f.callsign} flagged AOG at Stand ${f.stand}`);
+            showToast(`${f.callsign} marked AOG (Engineering Notified)`);
+            renderAodbTable();
+        }
+
+        function cycleState(id) {
+            const states = ['ON BLOCK', 'BOARDING', 'READY TOBT', 'DELAYED', 'AOG'];
+            const f = aodbFlights.find(item => item.id === id);
+            if (!f) return;
+            f.state = states[(states.indexOf(f.state) + 1) % states.length];
+            logAudit(`${f.callsign} A-CDM status -> ${f.state}`);
+            renderAodbTable();
+        }
+
+        function renderApronGrid() {
+            const grid = document.getElementById('apron-grid');
+            grid.innerHTML = aodbFlights.map(f => {
+                const doneCount = [f.gse.fuel, f.gse.catering, f.gse.baggage, f.gse.cleaning].filter(Boolean).length;
+                const pct = doneCount * 25;
+                const borderCol = f.state === 'AOG' ? 'border-sky-danger' : (pct === 100 ? 'border-sky-teal' : 'border-sky-blue');
+                return `
+                <div class="bg-sky-canvas/60 rounded-xl p-4 border-l-4 ${borderCol} border border-slate-200 flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="font-mono font-extrabold text-xs px-2.5 py-1 rounded bg-sky-navy text-white">${f.term} • STAND ${f.stand}</span>
+                        <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${getStateBadge(f.state)}">${f.state}</span>
+                    </div>
+                    <div class="my-3">
+                        <div class="text-sm font-extrabold text-sky-navy font-mono">${f.callsign} (${f.reg})</div>
+                        <div class="text-xs text-sky-textMuted">${f.acType} • ${f.route}</div>
+                        <div class="text-[11px] font-mono text-sky-blue mt-1">GPU: ${f.gse.gpu}</div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] font-mono font-bold mb-1">
+                            <span>GSE Turnaround Progress</span>
+                            <span>${pct}%</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="h-full ${pct === 100 ? 'bg-sky-teal' : 'bg-sky-blue'}" style="width:${pct}%"></div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderSlotsAndBaggage() {
+            const rwyEl = document.getElementById('rwy-sequence-list');
+            rwyEl.innerHTML = aodbFlights.map((f, idx) => `
+                <div class="p-3 rounded-lg bg-sky-canvas border border-slate-200 flex items-center justify-between text-xs font-mono">
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 rounded bg-sky-navy text-white font-bold flex items-center justify-center">#${idx + 1}</span>
+                        <div>
+                            <span class="font-extrabold text-sky-navy">${f.callsign}</span>
+                            <span class="text-sky-textMuted ml-2">${f.acType}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="px-2 py-0.5 rounded bg-white border border-slate-300 font-bold text-sky-blue">RWY ${f.rwy}</span>
+                        <span class="font-bold text-sky-navy">CTOT ${f.ctot}Z</span>
+                    </div>
+                </div>
+            `).join('');
+
+            const bagEl = document.getElementById('baggage-list');
+            bagEl.innerHTML = aodbFlights.map(f => `
+                <div class="p-3 rounded-lg bg-sky-canvas border border-slate-200 flex items-center justify-between text-xs font-mono">
+                    <div>
+                        <span class="px-2 py-0.5 rounded bg-sky-blue text-white font-bold">${f.belt}</span>
+                        <span class="font-extrabold text-sky-navy ml-2">${f.callsign} (${f.route})</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-bold text-sky-teal">${f.pax} Pax Bags</span>
+                        <span class="text-sky-textMuted ml-2">(${(f.cargoKg/1000).toFixed(1)}t ULD)</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function executeAdminSql(type) {
+            const out = document.getElementById('sql-admin-output');
+            if (type === 'turnaround') {
+                out.innerHTML = `
+                    <div class="bg-sky-navy text-sky-teal p-3 rounded-lg font-mono text-xs mb-3">
+                        SELECT stand_code, callsign, ac_icao, TIMESTAMPDIFF(MINUTE, sibt, tobt) AS ground_time_mins, gse_status FROM aodb_turnarounds WHERE ground_time_mins > 45 ORDER BY ground_time_mins DESC;
+                    </div>
+                    <table class="w-full text-left text-xs font-mono border-collapse">
+                        <thead><tr class="bg-sky-navyLight text-white"><th class="p-2.5">STAND</th><th class="p-2.5">CALLSIGN</th><th class="p-2.5">AIRCRAFT</th><th class="p-2.5">GROUND TIME</th><th class="p-2.5">BOTTLENECK</th></tr></thead>
+                        <tbody class="divide-y divide-slate-200">
+                            <tr><td class="p-2.5 font-bold">T3 • G18</td><td class="p-2.5">SQ-403</td><td class="p-2.5">A388 (Super)</td><td class="p-2.5 text-sky-danger font-bold">85 mins</td><td class="p-2.5">APU Bleed Air Valve Fault</td></tr>
+                            <tr><td class="p-2.5 font-bold">T3 • G09</td><td class="p-2.5">UK-945</td><td class="p-2.5">A20N (Med)</td><td class="p-2.5 text-[#D9532F] font-bold">52 mins</td><td class="p-2.5">High-Lift Catering Truck Delay</td></tr>
+                            <tr><td class="p-2.5 font-bold">T3 • G12</td><td class="p-2.5">AI-111</td><td class="p-2.5">B77W (Heavy)</td><td class="p-2.5 text-sky-teal font-bold">45 mins</td><td class="p-2.5">On Target (TOBT Green)</td></tr>
+                        </tbody>
+                    </table>`;
+            } else if (type === 'stand_conflict') {
+                out.innerHTML = `
+                    <div class="bg-sky-navy text-sky-teal p-3 rounded-lg font-mono text-xs mb-3">
+                        SELECT a.stand_code, a.callsign AS occupying_flight, b.callsign AS inbound_flight, a.tobt AS vacate_time, b.sibt AS arrival_time FROM aodb_movements a JOIN aodb_movements b ON a.stand_code = b.stand_code WHERE a.id <> b.id;
+                    </div>
+                    <div class="p-4 rounded-lg bg-[#E6F6F5] border border-sky-teal text-xs font-mono text-sky-navy font-bold">
+                        0 Active Stand Allocation Overlaps Detected. Minimum 20-minute buffer enforced across Pier A, B, and G.
+                    </div>`;
+            } else {
+                out.innerHTML = `
+                    <pre class="bg-sky-navy text-slate-100 p-4 rounded-lg font-mono text-xs overflow-x-auto">-- AirportOperationsPro AODB Production Schema
+CREATE TABLE aodb_movements (
+    movement_id INT PRIMARY KEY AUTO_INCREMENT,
+    mov_type ENUM('ARR', 'DEP') NOT NULL,
+    callsign VARCHAR(10) NOT NULL,
+    tail_reg VARCHAR(10) NOT NULL,
+    ac_icao CHAR(4) NOT NULL,
+    sobt TIME NOT NULL,
+    tobt TIME NOT NULL,
+    ctot TIME,
+    stand_code VARCHAR(6) NOT NULL,
+    runway_code VARCHAR(4) NOT NULL,
+    cdm_state ENUM('ON BLOCK','BOARDING','READY TOBT','DELAYED','AOG')
+);</pre>`;
+            }
+        }
+
+        function updateMetrics() {
+            document.getElementById('metric-movements').textContent = aodbFlights.length;
+            const compliant = aodbFlights.filter(f => f.state !== 'DELAYED' && f.state !== 'AOG').length;
+            document.getElementById('metric-otp').textContent = Math.round((compliant / aodbFlights.length) * 100) + '%';
+            const aogCount = aodbFlights.filter(f => f.state === 'AOG').length;
+            document.getElementById('metric-alerts').textContent = aogCount;
+        }
+
+        function triggerGroundStop() {
+            groundStopActive = !groundStopActive;
+            const btn = document.getElementById('btn-ground-stop');
+            if (groundStopActive) {
+                btn.className = 'bg-sky-danger text-white font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 animate-pulse';
+                btn.innerHTML = '<i class="fa-solid fa-ban"></i> RWY 29R SLOT HOLD ACTIVE';
+                logAudit('ATC FLOW CONTROL: Departure CTOT slot hold activated on RWY 29R');
+                showToast('ATC Ground Slot Hold Activated');
+            } else {
+                btn.className = 'bg-[#FFF2EE] text-[#D9532F] hover:bg-sky-amber hover:text-white border border-sky-amber/40 font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5';
+                btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ATC Slot Hold';
+                logAudit('ATC FLOW CONTROL: Normal runway sequencing resumed');
+                showToast('Normal Runway Sequencing Resumed');
+            }
+        }
+
+        function switchModule(mod) {
+            ['aodb', 'apron', 'slots', 'sql', 'java'].forEach(m => {
+                document.getElementById('mod-' + m).classList.add('hidden');
+                const btn = document.getElementById('tab-' + m);
+                btn.className = 'px-3 py-1.5 rounded-md text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition flex items-center gap-1.5';
+            });
+            document.getElementById('mod-' + mod).classList.remove('hidden');
+            document.getElementById('tab-' + mod).className = 'px-3 py-1.5 rounded-md text-xs font-bold bg-sky-blue text-white transition flex items-center gap-1.5 shadow-sm';
+        }
+
+        function openFlightModal() {
+            document.getElementById('flight-modal').classList.remove('hidden');
+            document.getElementById('flight-modal').classList.add('flex');
+        }
+
+        function closeFlightModal() {
+            document.getElementById('flight-modal').classList.add('hidden');
+            document.getElementById('flight-modal').classList.remove('flex');
+        }
+
+        function handleAddMovement(e) {
+            e.preventDefault();
+            const mov = document.getElementById('f-mov').value;
+            const callsign = document.getElementById('f-callsign').value.toUpperCase();
+            const reg = document.getElementById('f-reg').value.toUpperCase();
+            const acType = document.getElementById('f-ac').value.toUpperCase();
+            const route = document.getElementById('f-route').value.toUpperCase();
+            const sobt = document.getElementById('f-sobt').value;
+            const term = document.getElementById('f-term').value;
+            const stand = document.getElementById('f-stand').value.toUpperCase();
+            const rwy = document.getElementById('f-rwy').value;
+
+            const newId = Date.now();
+            aodbFlights.unshift({
+                id: newId, mov, callsign, operator: 'Scheduled Carrier', reg, acType,
+                route, term, stand, rwy, belt: mov === 'DEP' ? 'MU-06' : 'CL-04',
+                sobt, tobt: sobt, ctot: sobt, pax: 180, cap: 200, cargoKg: 5400,
+                state: 'ON BLOCK',
+                gse: { fuel: true, catering: false, baggage: false, cleaning: true, gpu: 'CONNECTED', pushback: 'STANDBY' }
+            });
+
+            selectedFlightId = newId;
+            closeFlightModal();
+            logAudit(`INSERT aodb_movements: ${callsign} (${reg}) assigned Stand ${stand}`);
+            renderAodbTable();
+            renderApronGrid();
+            renderSlotsAndBaggage();
+            showToast(`Movement ${callsign} committed to AODB`);
+        }
+
+        function logAudit(entry) {
+            const log = document.getElementById('audit-log');
+            const now = new Date();
+            const utc = String(now.getUTCHours()).padStart(2, '0') + ':' + String(now.getUTCMinutes()).padStart(2, '0') + 'Z';
+            const div = document.createElement('div');
+            div.textContent = `[${utc}] ${entry}`;
+            log.prepend(div);
+        }
+
+        function copyJavaTheme() {
+            const code = document.getElementById('java-source-code').innerText;
+            const ta = document.createElement('textarea');
+            ta.value = code;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            document.getElementById('copy-java-label').textContent = 'Copied!';
+            showToast('Java Swing Admin Theme copied to clipboard');
+            setTimeout(() => {
+                document.getElementById('copy-java-label').textContent = 'Copy Java Swing Theme Code';
+            }, 2200);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            t.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => t.classList.add('opacity-0', 'pointer-events-none'), 2400);
+        }
+
+        setInterval(() => {
+            const d = new Date();
+            const h = String(d.getUTCHours()).padStart(2, '0');
+            const m = String(d.getUTCMinutes()).padStart(2, '0');
+            const s = String(d.getUTCSeconds()).padStart(2, '0');
+            document.getElementById('utc-clock').textContent = `UTC ${h}:${m}:${s}Z`;
+        }, 1000);
+
+        window.onload = function () {
+            renderAodbTable();
+            renderApronGrid();
+            renderSlotsAndBaggage();
+            executeAdminSql('turnaround');
+        };
+    </script>
+</body>
+</html>

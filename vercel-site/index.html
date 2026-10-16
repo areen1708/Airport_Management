@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirportOperationsPro | Airport Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        sky: {
+                            navy: '#05203C',      /* Primary Deep Header / Sidebar / Table Head */
+                            navyLight: '#0B2D52', /* Secondary Dark Surface */
+                            blue: '#0062E3',      /* Primary Action Blue */
+                            blueHover: '#004EB8', /* Action Hover */
+                            teal: '#00A698',      /* On-Block / Cleared / SLA Met */
+                            canvas: '#F1F2F8',    /* Workspace Background */
+                            card: '#FFFFFF',      /* Panel Surface */
+                            textMain: '#161616',  /* Primary Ink */
+                            textMuted: '#545860', /* Secondary Slate */
+                            amber: '#FF7B59',     /* Ground Delay / Slot Warning */
+                            danger: '#E70866'     /* AOG / Emergency / Critical */
+                        }
+                    },
+                    boxShadow: {
+                        'panel': '0 2px 8px rgba(5, 32, 60, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F1F2F8;
+            color: #161616;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F2F8;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+        }
+        .data-grid th {
+            white-space: nowrap;
+        }
+        .data-grid td {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col font-sans antialiased overflow-hidden select-none">
+
+    <header class="bg-sky-navy text-white border-b border-white/10 z-30 shrink-0">
+        <!-- Top Info Bar -->
+        <div class="bg-[#031528] px-4 py-1.5 text-xs flex flex-wrap items-center justify-between gap-4 border-b border-white/10">
+            <div class="flex items-center gap-4">
+                <span class="flex items-center gap-1.5 text-sky-teal font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-sky-teal animate-ping"></span>
+                    MySQL Database: Connected
+                </span>
+                <span class="text-slate-400">|</span>
+                <span class="text-slate-200"><strong>Airport:</strong> Indira Gandhi International Airport (DEL)</span>
+                <span class="hidden md:inline text-slate-400">|</span>
+                <span class="hidden md:inline text-slate-300"><i class="fa-solid fa-cloud-sun text-sky-blue mr-1"></i> Weather: 28°C Clear Skies (Good Visibility)</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-slate-300 text-xs">Project Package: <strong class="text-white font-mono">com.areen.airport</strong></span>
+                <span class="bg-sky-navyLight px-2.5 py-0.5 rounded text-white font-mono font-bold border border-white/10" id="live-clock">12:30:00 PM</span>
+            </div>
+        </div>
+
+        <!-- Primary Navigation Header -->
+        <div class="px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-sky-blue flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-plane-departure text-white text-lg"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-extrabold text-lg tracking-tight text-white">AirportOperationsPro</span>
+                        <span class="text-[11px] uppercase bg-sky-teal text-white px-2 py-0.5 rounded-full font-bold">Admin Portal</span>
+                    </div>
+                    <p class="text-xs text-slate-300">Complete Flight, Runway, Gate & Passenger Management System</p>
+                </div>
+            </div>
+
+            <!-- Easy-to-Understand Module Tabs -->
+            <nav class="flex flex-wrap items-center gap-1.5 bg-sky-navyLight p-1.5 rounded-xl border border-white/10">
+                <button onclick="switchTab('flights')" id="tab-flights" class="px-3.5 py-2 rounded-lg text-xs font-bold bg-sky-blue text-white transition flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-plane"></i> Flights Schedule
+                </button>
+                <button onclick="switchTab('passengers')" id="tab-passengers" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition flex items-center gap-2">
+                    <i class="fa-solid fa-users"></i> Passengers & Check-In
+                </button>
+                <button onclick="switchTab('runways')" id="tab-runways" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition flex items-center gap-2">
+                    <i class="fa-solid fa-road"></i> Runways & Gates
+                </button>
+                <button onclick="switchTab('baggage')" id="tab-baggage" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition flex items-center gap-2">
+                    <i class="fa-solid fa-suitcase-rolling"></i> Baggage & Services
+                </button>
+                <button onclick="switchTab('code')" id="tab-code" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-sky-teal hover:bg-white/5 transition flex items-center gap-2 border border-sky-teal/30">
+                    <i class="fa-solid fa-code"></i> SQL & Java Code
+                </button>
+            </nav>
+
+            <!-- Quick Action Buttons -->
+            <div class="flex items-center gap-2">
+                <button onclick="openPassengerModal()" class="bg-sky-navyLight hover:bg-white/15 text-white border border-white/20 font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-plus text-sky-teal"></i> + Book Passenger
+                </button>
+                <button onclick="openFlightModal()" class="bg-sky-blue hover:bg-sky-blueHover text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-plus"></i> + Add New Flight
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Main Left/Center Content -->
+        <main class="flex-1 flex flex-col overflow-y-auto p-5 space-y-5">
+
+            <!-- Simple, Clear KPI Summary Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div class="bg-white rounded-xl p-4 shadow-panel border-l-4 border-sky-blue">
+                    <div class="flex items-center justify-between text-xs font-bold text-sky-textMuted">
+                        <span>Total Flights Today</span>
+                        <span class="w-7 h-7 rounded-lg bg-[#E8F1FD] text-sky-blue flex items-center justify-center"><i class="fa-solid fa-plane"></i></span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-sky-navy mt-1" id="kpi-flights">7</div>
+                    <div class="text-xs text-sky-textMuted mt-0.5" id="kpi-flights-sub">5 Departures • 2 Arrivals</div>
+                </div>
+
+                <div class="bg-white rounded-xl p-4 shadow-panel border-l-4 border-sky-teal">
+                    <div class="flex items-center justify-between text-xs font-bold text-sky-textMuted">
+                        <span>Total Passengers</span>
+                        <span class="w-7 h-7 rounded-lg bg-[#E6F6F5] text-sky-teal flex items-center justify-center"><i class="fa-solid fa-users"></i></span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-sky-teal mt-1" id="kpi-passengers">0</div>
+                    <div class="text-xs text-sky-textMuted mt-0.5" id="kpi-checkedin-sub">Checked-in & Boarding</div>
+                </div>
+
+                <div class="bg-white rounded-xl p-4 shadow-panel border-l-4 border-sky-navy">
+                    <div class="flex items-center justify-between text-xs font-bold text-sky-textMuted">
+                        <span>Active Runways</span>
+                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-sky-navy flex items-center justify-center"><i class="fa-solid fa-road"></i></span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-sky-navy mt-1" id="kpi-runways">2 / 3</div>
+                    <div class="text-xs text-sky-teal font-semibold mt-0.5">Open for Takeoff/Landing</div>
+                </div>
+
+                <div class="bg-white rounded-xl p-4 shadow-panel border-l-4 border-sky-blue">
+                    <div class="flex items-center justify-between text-xs font-bold text-sky-textMuted">
+                        <span>Terminal Gates Occupied</span>
+                        <span class="w-7 h-7 rounded-lg bg-[#E8F1FD] text-sky-blue flex items-center justify-center"><i class="fa-solid fa-door-open"></i></span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-sky-navy mt-1" id="kpi-gates">5 / 8</div>
+                    <div class="text-xs text-sky-blue font-semibold mt-0.5">3 Gates Available</div>
+                </div>
+
+                <div class="bg-white rounded-xl p-4 shadow-panel border-l-4 border-sky-amber">
+                    <div class="flex items-center justify-between text-xs font-bold text-sky-textMuted">
+                        <span>Delayed / Attention</span>
+                        <span class="w-7 h-7 rounded-lg bg-[#FFF2EE] text-[#D9532F] flex items-center justify-center"><i class="fa-solid fa-clock"></i></span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-[#D9532F] mt-1" id="kpi-delays">1</div>
+                    <div class="text-xs text-[#D9532F] font-semibold mt-0.5">Requires Admin Action</div>
+                </div>
+            </div>
+
+            <!-- TAB 1: FLIGHTS SCHEDULE & MANAGEMENT -->
+            <section id="view-flights" class="flex-1 flex flex-col bg-white rounded-xl shadow-panel border border-slate-200/80 overflow-hidden">
+                <!-- Search & Filter Bar -->
+                <div class="bg-sky-navy px-4 py-3.5 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input id="flight-search" oninput="renderFlightsTable()" type="text" placeholder="Search Airline, Flight No, City, Gate..." class="bg-white text-sky-textMain pl-8 pr-3 py-2 rounded-lg text-xs font-semibold w-64 focus:outline-none">
+                        </div>
+
+                        <select id="filter-type" onchange="renderFlightsTable()" class="bg-sky-navyLight text-white border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none">
+                            <option value="ALL">All Flights (Arrivals & Departures)</option>
+                            <option value="Departure">Departures Only</option>
+                            <option value="Arrival">Arrivals Only</option>
+                        </select>
+
+                        <select id="filter-status" onchange="renderFlightsTable()" class="bg-sky-navyLight text-white border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none">
+                            <option value="ALL">All Statuses</option>
+                            <option value="On Time">On Time</option>
+                            <option value="Boarding">Boarding Now</option>
+                            <option value="Delayed">Delayed</option>
+                            <option value="Departed">Departed / Landed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div class="text-xs text-slate-300">
+                        <i class="fa-regular fa-hand-pointer text-sky-teal mr-1"></i> Click any flight row to manage its <strong class="text-white">Gate, Runway, Status & Services</strong> on the right
+                    </div>
+                </div>
+
+                <!-- Flights Table -->
+                <div class="overflow-x-auto flex-1">
+                    <table class="w-full text-left border-collapse data-grid">
+                        <thead>
+                            <tr class="bg-[#0B2D52] text-slate-200 text-xs font-bold uppercase tracking-wider border-b border-slate-300">
+                                <th class="py-3 px-4">Type</th>
+                                <th class="py-3 px-4">Flight & Airline</th>
+                                <th class="py-3 px-4">From → To</th>
+                                <th class="py-3 px-4">Time</th>
+                                <th class="py-3 px-4">Terminal & Gate</th>
+                                <th class="py-3 px-4">Assigned Runway</th>
+                                <th class="py-3 px-4">Aircraft</th>
+                                <th class="py-3 px-4">Passengers</th>
+                                <th class="py-3 px-4">Flight Status</th>
+                                <th class="py-3 px-4 text-right">Admin Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="flights-tbody" class="divide-y divide-slate-200 text-xs">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 2: PASSENGERS & CHECK-IN MANAGEMENT -->
+            <section id="view-passengers" class="hidden flex-1 flex flex-col bg-white rounded-xl shadow-panel border border-slate-200 overflow-hidden">
+                <div class="bg-sky-navy px-4 py-3.5 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <h2 class="text-white font-bold text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-id-card-clip text-sky-teal"></i> Passenger Check-In & Boarding List
+                        </h2>
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input id="pax-search" oninput="renderPassengersTable()" type="text" placeholder="Search Passenger Name, Ticket PNR, Flight..." class="bg-white text-sky-textMain pl-8 pr-3 py-1.5 rounded-lg text-xs font-semibold w-64 focus:outline-none">
+                        </div>
+                        <select id="pax-flight-filter" onchange="renderPassengersTable()" class="bg-sky-navyLight text-white border border-white/15 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none">
+                            <option value="ALL">Filter by Flight: All Flights</option>
+                        </select>
+                    </div>
+                    <button onclick="openPassengerModal()" class="bg-sky-teal hover:bg-[#008f82] text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-plus"></i> + Add Passenger Booking
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto flex-1">
+                    <table class="w-full text-left border-collapse data-grid">
+                        <thead>
+                            <tr class="bg-[#0B2D52] text-slate-200 text-xs font-bold uppercase tracking-wider">
+                                <th class="py-3 px-4">Ticket PNR</th>
+                                <th class="py-3 px-4">Passenger Name</th>
+                                <th class="py-3 px-4">Flight No</th>
+                                <th class="py-3 px-4">Destination</th>
+                                <th class="py-3 px-4">Seat & Class</th>
+                                <th class="py-3 px-4">Checked Bags</th>
+                                <th class="py-3 px-4">Boarding Status</th>
+                                <th class="py-3 px-4 text-right">Check-In / Board Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="passengers-tbody" class="divide-y divide-slate-200 text-xs">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 3: RUNWAYS & TERMINAL GATES CONTROL -->
+            <section id="view-runways" class="hidden space-y-5">
+                <!-- Runway Control Cards -->
+                <div class="bg-white rounded-xl p-5 shadow-panel border border-slate-200">
+                    <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                        <div>
+                            <h2 class="text-base font-extrabold text-sky-navy">Airport Runway Control Center</h2>
+                            <p class="text-xs text-sky-textMuted">Open or close runways for maintenance, weather, or emergency landings, and view currently assigned aircraft.</p>
+                        </div>
+                        <span class="text-xs font-bold px-3 py-1 rounded-full bg-[#E6F6F5] text-sky-teal">Air Traffic Control Live</span>
+                    </div>
+                    <div id="runways-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Terminal Gates Board -->
+                <div class="bg-white rounded-xl p-5 shadow-panel border border-slate-200">
+                    <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                        <div>
+                            <h2 class="text-base font-extrabold text-sky-navy">Terminal Boarding Gates Overview</h2>
+                            <p class="text-xs text-sky-textMuted">Visual map of which flight is parked at each terminal gate right now.</p>
+                        </div>
+                    </div>
+                    <div id="gates-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3.5 mt-4">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: BAGGAGE BELTS & GROUND SERVICES -->
+            <section id="view-baggage" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div class="bg-white rounded-xl p-5 shadow-panel border border-slate-200">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div>
+                            <h3 class="text-base font-extrabold text-sky-navy">Baggage Claim Belts</h3>
+                            <p class="text-xs text-sky-textMuted">Assign and monitor conveyor belts for arriving and departing passenger luggage</p>
+                        </div>
+                        <span class="text-xs font-bold px-2.5 py-1 rounded bg-sky-blue text-white">Conveyors Active</span>
+                    </div>
+                    <div id="baggage-belts-list" class="space-y-3 mt-4">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl p-5 shadow-panel border border-slate-200">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div>
+                            <h3 class="text-base font-extrabold text-sky-navy">Aircraft Ground Preparation Checklist</h3>
+                            <p class="text-xs text-sky-textMuted">Track Refueling, Food Catering, Luggage Loading, and Cabin Cleaning before takeoff</p>
+                        </div>
+                        <span class="text-xs font-bold px-2.5 py-1 rounded bg-sky-teal text-white">Ramp Crew</span>
+                    </div>
+                    <div id="ground-prep-list" class="space-y-3 mt-4">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: SQL QUERIES & JAVA SWING SOURCE CODE (For Project Viva / Presentation) -->
+            <section id="view-code" class="hidden space-y-5">
+                <div class="bg-white rounded-xl p-5 shadow-panel border border-slate-200">
+                    <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
+                        <div>
+                            <span class="text-xs font-mono font-bold text-sky-blue">AirportOperationsPro / Database & Java Code</span>
+                            <h2 class="text-base font-extrabold text-sky-navy">College Presentation: SQL Queries & Java Swing Theme</h2>
+                            <p class="text-xs text-sky-textMuted">Show your professor how the backend SQL database and Java Swing UI work with this exact color palette.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="showCodeTab('sql_tables')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-blue text-white hover:bg-sky-blueHover transition">
+                                1. SQL CREATE TABLEs
+                            </button>
+                            <button onclick="showCodeTab('sql_reports')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-navy text-white hover:bg-sky-navyLight transition">
+                                2. Run Sample SQL Report
+                            </button>
+                            <button onclick="showCodeTab('java_swing')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-teal text-white hover:bg-[#008f82] transition">
+                                3. Java Swing Color Code
+                            </button>
+                        </div>
+                    </div>
+                    <div id="code-display-area" class="mt-4"></div>
+                </div>
+            </section>
+        </main>
+
+        <aside class="w-80 lg:w-96 bg-white border-l border-slate-200 flex flex-col shrink-0 shadow-xl">
+            <div class="bg-sky-navy text-white p-4 flex items-center justify-between">
+                <div>
+                    <span class="text-[11px] uppercase tracking-wider text-sky-teal font-bold">Quick Flight Controller</span>
+                    <h3 class="text-base font-extrabold mt-0.5" id="panel-flight-title">Select a Flight</h3>
+                </div>
+                <span id="panel-flight-type" class="text-xs font-bold px-2.5 py-1 rounded bg-sky-blue text-white">Departure</span>
+            </div>
+
+            <div id="inspector-content" class="p-4 flex-1 overflow-y-auto space-y-4">
+                <!-- Populated dynamically when clicking a flight -->
+            </div>
+
+            <!-- Live Activity Feed at Bottom of Right Sidebar -->
+            <div class="border-t border-slate-200 bg-sky-canvas p-3.5">
+                <div class="text-xs font-bold uppercase text-sky-navy mb-2 flex items-center justify-between">
+                    <span><i class="fa-solid fa-bolt text-sky-blue mr-1"></i> Recent Admin Activity</span>
+                    <span class="text-[10px] bg-sky-teal text-white px-2 py-0.5 rounded-full">LIVE</span>
+                </div>
+                <div id="activity-feed" class="space-y-1.5 max-h-28 overflow-y-auto text-xs text-sky-textMuted">
+                    <div>• Air India AI-101 boarding started at Gate G12</div>
+                    <div>• Runway 1 opened for Departures</div>
+                    <div>• Passenger Rahul Sharma checked in (Seat 14A)</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- MODAL 1: ADD NEW FLIGHT -->
+    <div id="flight-modal" class="fixed inset-0 bg-sky-navy/75 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-sky-blue text-white flex items-center justify-center">
+                        <i class="fa-solid fa-plane-up"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-sky-navy text-base">Schedule a New Flight</h3>
+                        <p class="text-xs text-sky-textMuted">Add a new arrival or departure to the airport schedule</p>
+                    </div>
+                </div>
+                <button onclick="closeFlightModal()" class="text-slate-400 hover:text-sky-navy text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleAddFlight(event)" class="space-y-3.5 mt-4 text-xs">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-sky-textMuted mb-1">Flight Type</label>
+                        <select id="new-f-type" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-semibold">
+                            <option value="Departure">Departure (Taking Off)</option>
+                            <option value="Arrival">Arrival (Landing)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted mb-1">Airline Name</label>
+                        <input id="new-f-airline" required placeholder="e.g. IndiGo or Air India" value="IndiGo" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-semibold">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block font-bold text-sky-textMuted mb-1">Flight Number</label>
+                        <input id="new-f-no" required placeholder="e.g. 6E-502" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono font-bold uppercase">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted mb-1">From → To City</label>
+                        <input id="new-f-route" required placeholder="Delhi → Goa" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-semibold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted mb-1">Scheduled Time</label>
+                        <input id="new-f-time" type="time" value="15:30" required class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono font-bold">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block font-bold text-sky-textMuted mb-1">Terminal Gate</label>
+                        <select id="new-f-gate" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-bold">
+                            <option value="Gate G1">Gate G1 (T1)</option>
+                            <option value="Gate G2">Gate G2 (T1)</option>
+                            <option value="Gate G3">Gate G3 (T2)</option>
+                            <option value="Gate G4">Gate G4 (T2)</option>
+                            <option value="Gate G5">Gate G5 (T3)</option>
+                            <option value="Gate G6">Gate G6 (T3)</option>
+                            <option value="Gate G7">Gate G7 (T3)</option>
+                            <option value="Gate G8">Gate G8 (T3)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted mb-1">Runway</label>
+                        <select id="new-f-runway" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-bold">
+                            <option value="Runway 1 (North)">Runway 1 (North)</option>
+                            <option value="Runway 2 (South)">Runway 2 (South)</option>
+                            <option value="Runway 3 (Main)">Runway 3 (Main)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted mb-1">Aircraft Model</label>
+                        <input id="new-f-aircraft" required value="Airbus A320" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-semibold">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onclick="closeFlightModal()" class="px-4 py-2 rounded-lg font-bold text-sky-textMuted hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg font-bold bg-sky-blue hover:bg-sky-blueHover text-white shadow-sm">Save Flight</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: ADD PASSENGER BOOKING -->
+    <div id="passenger-modal" class="fixed inset-0 bg-sky-navy/75 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-sky-teal text-white flex items-center justify-center">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-sky-navy text-base">Book & Check-In Passenger</h3>
+                        <p class="text-xs text-sky-textMuted">Assign a passenger seat and luggage to a flight</p>
+                    </div>
+                </div>
+                <button onclick="closePassengerModal()" class="text-slate-400 hover:text-sky-navy text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleAddPassenger(event)" class="space-y-3.5 mt-4 text-xs">
+                <div>
+                    <label class="block font-bold text-sky-textMuted mb-1">Passenger Full Name</label>
+                    <input id="new-p-name" required placeholder="e.g. Priya Verma" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-semibold">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-sky-textMuted mb-1">Select Flight</label>
+                        <select id="new-p-flight" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-bold">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted mb-1">Seat Number</label>
+                        <input id="new-p-seat" required value="12A" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono font-bold uppercase">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-sky-textMuted mb-1">Ticket Class</label>
+                        <select id="new-p-class" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-semibold">
+                            <option value="Economy">Economy Class</option>
+                            <option value="Business">Business Class</option>
+                            <option value="First Class">First Class</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-sky-textMuted mb-1">Checked Bags</label>
+                        <select id="new-p-bags" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-semibold">
+                            <option value="1 Bag (15 kg)">1 Bag (15 kg)</option>
+                            <option value="2 Bags (25 kg)">2 Bags (25 kg)</option>
+                            <option value="Hand Bag Only">Hand Bag Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onclick="closePassengerModal()" class="px-4 py-2 rounded-lg font-bold text-sky-textMuted hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg font-bold bg-sky-teal hover:bg-[#008f82] text-white shadow-sm">Add Passenger</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-sky-navy text-white px-4 py-3 rounded-xl shadow-xl border border-sky-blue text-xs font-bold flex items-center gap-2.5 opacity-0 pointer-events-none transition-all duration-200 z-50">
+        <i class="fa-solid fa-circle-check text-sky-teal text-sm"></i>
+        <span id="toast-msg">Action Completed</span>
+    </div>
+
+    <script>
+        // 1. EASY-TO-UNDERSTAND FLIGHTS DATA
+        const flights = [
+            {
+                id: 1, type: 'Departure', flightNo: 'AI-101', airline: 'Air India',
+                route: 'Delhi → London', time: '10:30 AM', gate: 'Gate G5', runway: 'Runway 1 (North)',
+                aircraft: 'Boeing 787 Dreamliner', booked: 210, capacity: 250, belt: 'Belt B1',
+                status: 'Boarding',
+                services: { fuel: true, catering: true, baggage: true, cleaning: true }
+            },
+            {
+                id: 2, type: 'Departure', flightNo: '6E-204', airline: 'IndiGo',
+                route: 'Delhi → Mumbai', time: '11:15 AM', gate: 'Gate G1', runway: 'Runway 1 (North)',
+                aircraft: 'Airbus A320neo', booked: 172, capacity: 180, belt: 'Belt B2',
+                status: 'On Time',
+                services: { fuel: true, catering: true, baggage: false, cleaning: true }
+            },
+            {
+                id: 3, type: 'Arrival', flightNo: 'EK-512', airline: 'Emirates',
+                route: 'Dubai → Delhi', time: '11:45 AM', gate: 'Gate G6', runway: 'Runway 2 (South)',
+                aircraft: 'Boeing 777-300ER', booked: 318, capacity: 340, belt: 'Belt B3',
+                status: 'On Time',
+                services: { fuel: false, catering: false, baggage: true, cleaning: true }
+            },
+            {
+                id: 4, type: 'Departure', flightNo: 'UK-945', airline: 'Vistara',
+                route: 'Delhi → Bengaluru', time: '12:30 PM', gate: 'Gate G3', runway: 'Runway 1 (North)',
+                aircraft: 'Airbus A321', booked: 158, capacity: 188, belt: 'Belt B4',
+                status: 'Delayed',
+                services: { fuel: true, catering: false, baggage: false, cleaning: true }
+            },
+            {
+                id: 5, type: 'Arrival', flightNo: 'SQ-402', airline: 'Singapore Airlines',
+                route: 'Singapore → Delhi', time: '01:10 PM', gate: 'Gate G7', runway: 'Runway 2 (South)',
+                aircraft: 'Airbus A350', booked: 265, capacity: 290, belt: 'Belt B5',
+                status: 'On Time',
+                services: { fuel: true, catering: true, baggage: true, cleaning: false }
+            },
+            {
+                id: 6, type: 'Departure', flightNo: 'QP-118', airline: 'Akasa Air',
+                route: 'Delhi → Goa', time: '02:00 PM', gate: 'Gate G2', runway: 'Runway 1 (North)',
+                aircraft: 'Boeing 737 MAX', booked: 164, capacity: 189, belt: 'Belt B2',
+                status: 'On Time',
+                services: { fuel: true, catering: true, baggage: true, cleaning: true }
+            }
+        ];
+
+        // 2. PASSENGERS DATA
+        const passengers = [
+            { id: 501, pnr: 'PNR-8821', name: 'Areen Sharma', flightNo: 'AI-101', route: 'Delhi → London', seat: '04A', cabin: 'Business', bags: '2 Bags (25 kg)', status: 'Boarded' },
+            { id: 502, pnr: 'PNR-8822', name: 'Riya Patel', flightNo: 'AI-101', route: 'Delhi → London', seat: '14C', cabin: 'Economy', bags: '1 Bag (15 kg)', status: 'Checked-In' },
+            { id: 503, pnr: 'PNR-9014', name: 'Kabir Malhotra', flightNo: '6E-204', route: 'Delhi → Mumbai', seat: '08F', cabin: 'Economy', bags: '1 Bag (15 kg)', status: 'Checked-In' },
+            { id: 504, pnr: 'PNR-9045', name: 'Ananya Iyer', flightNo: 'UK-945', route: 'Delhi → Bengaluru', seat: '02B', cabin: 'Business', bags: '2 Bags (25 kg)', status: 'Booked' },
+            { id: 505, pnr: 'PNR-9102', name: 'Vikram Singh', flightNo: '6E-204', route: 'Delhi → Mumbai', seat: '19A', cabin: 'Economy', bags: 'Hand Bag Only', status: 'Boarded' },
+            { id: 506, pnr: 'PNR-9188', name: 'Neha Gupta', flightNo: 'QP-118', route: 'Delhi → Goa', seat: '11D', cabin: 'Economy', bags: '1 Bag (15 kg)', status: 'Booked' }
+        ];
+
+        // 3. RUNWAYS DATA
+        const runways = [
+            { id: 'r1', name: 'Runway 1 (North)', mode: 'Departures / Takeoffs', length: '4,430 Meters', status: 'OPEN', lights: 'ON (100%)' },
+            { id: 'r2', name: 'Runway 2 (South)', mode: 'Arrivals / Landings', length: '3,810 Meters', status: 'OPEN', lights: 'ON (100%)' },
+            { id: 'r3', name: 'Runway 3 (Main)', mode: 'Maintenance / Backup', length: '4,100 Meters', status: 'MAINTENANCE', lights: 'STANDBY' }
+        ];
+
+        const allGates = ['Gate G1', 'Gate G2', 'Gate G3', 'Gate G4', 'Gate G5', 'Gate G6', 'Gate G7', 'Gate G8'];
+        let selectedFlightId = 1;
+
+        function getStatusStyle(status) {
+            switch (status) {
+                case 'On Time':
+                case 'Boarded':
+                    return 'bg-[#E6F6F5] text-[#008277] border-[#00A698]/40';
+                case 'Boarding':
+                case 'Checked-In':
+                    return 'bg-[#E8F1FD] text-sky-blue border-sky-blue/40';
+                case 'Departed':
+                    return 'bg-slate-100 text-sky-navy border-slate-300';
+                case 'Delayed':
+                case 'Booked':
+                    return 'bg-[#FFF2EE] text-[#D9532F] border-[#FF7B59]/40';
+                case 'Cancelled':
+                    return 'bg-[#FCE8F0] text-sky-danger border-sky-danger/40';
+                default:
+                    return 'bg-slate-100 text-slate-700';
+            }
+        }
+
+        // RENDER FLIGHTS TABLE
+        function renderFlightsTable() {
+            const tbody = document.getElementById('flights-tbody');
+            const search = document.getElementById('flight-search').value.toLowerCase().trim();
+            const typeFilter = document.getElementById('filter-type').value;
+            const statusFilter = document.getElementById('filter-status').value;
+
+            const filtered = flights.filter(f => {
+                const matchSearch = !search ||
+                    f.flightNo.toLowerCase().includes(search) ||
+                    f.airline.toLowerCase().includes(search) ||
+                    f.route.toLowerCase().includes(search) ||
+                    f.gate.toLowerCase().includes(search);
+                const matchType = typeFilter === 'ALL' || f.type === typeFilter;
+                const matchStatus = statusFilter === 'ALL' || f.status === statusFilter;
+                return matchSearch && matchType && matchStatus;
+            });
+
+            tbody.innerHTML = filtered.map(f => {
+                const isSelected = f.id === selectedFlightId;
+                const typeBadge = f.type === 'Departure'
+                    ? 'bg-sky-navy text-white'
+                    : 'bg-sky-teal text-white';
+
+                const fillPct = Math.round((f.booked / f.capacity) * 100);
+
+                return `
+                <tr onclick="selectFlight(${f.id})" class="cursor-pointer transition ${isSelected ? 'bg-[#E8F1FD]/90 font-semibold' : 'hover:bg-sky-canvas/70'}">
+                    <td class="py-3 px-4">
+                        <span class="text-[11px] font-bold px-2.5 py-1 rounded-md ${typeBadge}">
+                            <i class="fa-solid ${f.type === 'Departure' ? 'fa-plane-departure' : 'fa-plane-arrival'} mr-1"></i>${f.type}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="font-mono font-extrabold text-sky-navy text-sm">${f.flightNo}</div>
+                        <div class="text-xs text-sky-textMuted">${f.airline}</div>
+                    </td>
+                    <td class="py-3 px-4 font-bold text-sky-blue">${f.route}</td>
+                    <td class="py-3 px-4 font-mono font-bold text-sky-navy">${f.time}</td>
+                    <td class="py-3 px-4">
+                        <span class="px-2.5 py-1 rounded-md bg-sky-navy text-white font-bold text-xs">${f.gate}</span>
+                    </td>
+                    <td class="py-3 px-4 font-semibold text-sky-navy">${f.runway}</td>
+                    <td class="py-3 px-4 text-sky-textMuted">${f.aircraft}</td>
+                    <td class="py-3 px-4">
+                        <div class="font-mono font-bold text-sky-navy">${f.booked} / ${f.capacity}</div>
+                        <div class="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden mt-1">
+                            <div class="h-full bg-sky-teal" style="width:${fillPct}%"></div>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-extrabold border ${getStatusStyle(f.status)}">
+                            ${f.status}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-right" onclick="event.stopPropagation()">
+                        <button onclick="quickCycleStatus(${f.id})" class="bg-sky-blue hover:bg-sky-blueHover text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm">
+                            Change Status
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            updateKpis();
+            renderFlightInspector();
+            populateFlightDropdowns();
+        }
+
+        function selectFlight(id) {
+            selectedFlightId = id;
+            renderFlightsTable();
+        }
+
+        // RIGHT SIDEBAR: SIMPLE FLIGHT CONTROLLER
+        function renderFlightInspector() {
+            const f = flights.find(item => item.id === selectedFlightId) || flights[0];
+            if (!f) return;
+
+            document.getElementById('panel-flight-title').textContent = `${f.flightNo} (${f.airline})`;
+            const badge = document.getElementById('panel-flight-type');
+            badge.textContent = f.type;
+            badge.className = `text-xs font-bold px-2.5 py-1 rounded ${f.type === 'Departure' ? 'bg-sky-blue text-white' : 'bg-sky-teal text-white'}`;
+
+            const serviceToggle = (key, label, icon) => {
+                const done = f.services[key];
+                return `
+                <button onclick="toggleService(${f.id}, '${key}')" class="p-2.5 rounded-xl border text-left transition flex items-center justify-between ${done ? 'bg-[#E6F6F5] border-sky-teal text-sky-navy' : 'bg-sky-canvas border-slate-200 text-sky-textMuted'}">
+                    <span class="text-xs font-bold flex items-center gap-2">
+                        <i class="fa-solid ${icon} ${done ? 'text-sky-teal' : 'text-slate-400'}"></i> ${label}
+                    </span>
+                    <span class="text-[10px] font-extrabold px-2 py-0.5 rounded ${done ? 'bg-sky-teal text-white' : 'bg-slate-300 text-slate-700'}">
+                        ${done ? 'READY ✓' : 'PENDING'}
+                    </span>
+                </button>`;
+            };
+
+            document.getElementById('inspector-content').innerHTML = `
+                <!-- Flight Overview Box -->
+                <div class="bg-sky-canvas rounded-xl p-3.5 border border-slate-200 space-y-2 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-sky-textMuted">Route:</span>
+                        <span class="font-bold text-sky-blue">${f.route}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sky-textMuted">Scheduled Time:</span>
+                        <span class="font-mono font-bold text-sky-navy">${f.time}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sky-textMuted">Aircraft Model:</span>
+                        <span class="font-bold text-sky-navy">${f.aircraft}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sky-textMuted">Passengers Booked:</span>
+                        <span class="font-mono font-bold text-sky-teal">${f.booked} / ${f.capacity} Seats</span>
+                    </div>
+                </div>
+
+                <!-- Gate, Runway & Status Controls -->
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-sky-navy mb-1">1. Update Flight Status</label>
+                        <select onchange="updateFlightProp(${f.id}, 'status', this.value)" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-bold text-sky-navy bg-white">
+                            ${['On Time', 'Boarding', 'Delayed', 'Departed', 'Cancelled'].map(s => `<option value="${s}" ${f.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-xs font-bold text-sky-navy mb-1">2. Change Gate</label>
+                            <select onchange="updateFlightProp(${f.id}, 'gate', this.value)" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs font-bold text-sky-navy bg-white">
+                                ${allGates.map(g => `<option value="${g}" ${f.gate === g ? 'selected' : ''}>${g}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-sky-navy mb-1">3. Assign Runway</label>
+                            <select onchange="updateFlightProp(${f.id}, 'runway', this.value)" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs font-bold text-sky-navy bg-white">
+                                ${runways.map(r => `<option value="${r.name}" ${f.runway === r.name ? 'selected' : ''}>${r.name}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ground Preparation Checklist -->
+                <div class="pt-2 border-t border-slate-200">
+                    <label class="block text-xs font-bold text-sky-navy mb-2">4. Plane Preparation Checklist (Click to Toggle)</label>
+                    <div class="grid grid-cols-1 gap-2">
+                        ${serviceToggle('fuel', 'Refuel Aircraft Tank', 'fa-gas-pump')}
+                        ${serviceToggle('catering', 'Load Food & Drinks', 'fa-utensils')}
+                        ${serviceToggle('baggage', 'Load Passenger Suitcases', 'fa-suitcase-rolling')}
+                        ${serviceToggle('cleaning', 'Cabin Cleaning Complete', 'fa-broom')}
+                    </div>
+                </div>
+
+                <!-- Quick Action Buttons -->
+                <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
+                    <button onclick="approveTakeoff(${f.id})" class="bg-sky-teal hover:bg-[#008f82] text-white font-bold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-plane-circle-check"></i> Clear for Takeoff
+                    </button>
+                    <button onclick="deleteFlight(${f.id})" class="bg-[#FCE8F0] hover:bg-sky-danger hover:text-white text-sky-danger font-bold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-trash-can"></i> Remove Flight
+                    </button>
+                </div>
+            `;
+        }
+
+        function toggleService(flightId, serviceKey) {
+            const f = flights.find(item => item.id === flightId);
+            if (!f) return;
+            f.services[serviceKey] = !f.services[serviceKey];
+            logActivity(`${f.flightNo}: ${serviceKey.toUpperCase()} marked ${f.services[serviceKey] ? 'Ready' : 'Pending'}`);
+            renderFlightsTable();
+            renderBaggageAndServices();
+        }
+
+        function updateFlightProp(flightId, prop, value) {
+            const f = flights.find(item => item.id === flightId);
+            if (!f) return;
+            f[prop] = value;
+            logActivity(`${f.flightNo} updated ${prop} to "${value}"`);
+            showToast(`${f.flightNo}: ${prop.toUpperCase()} changed to ${value}`);
+            renderFlightsTable();
+            renderRunwaysAndGates();
+            renderBaggageAndServices();
+        }
+
+        function quickCycleStatus(flightId) {
+            const order = ['On Time', 'Boarding', 'Departed', 'Delayed', 'Cancelled'];
+            const f = flights.find(item => item.id === flightId);
+            if (!f) return;
+            f.status = order[(order.indexOf(f.status) + 1) % order.length];
+            logActivity(`${f.flightNo} status changed to ${f.status}`);
+            showToast(`${f.flightNo} is now ${f.status}`);
+            renderFlightsTable();
+        }
+
+        function approveTakeoff(flightId) {
+            const f = flights.find(item => item.id === flightId);
+            if (!f) return;
+            f.status = 'Departed';
+            f.services = { fuel: true, catering: true, baggage: true, cleaning: true };
+            logActivity(`${f.flightNo} cleared for takeoff on ${f.runway}`);
+            showToast(`${f.flightNo} Cleared for Takeoff!`);
+            renderFlightsTable();
+            renderRunwaysAndGates();
+        }
+
+        function deleteFlight(flightId) {
+            if (flights.length <= 1) {
+                showToast('Cannot delete the last remaining flight');
+                return;
+            }
+            const idx = flights.findIndex(item => item.id === flightId);
+            if (idx > -1) {
+                const removed = flights.splice(idx, 1)[0];
+                selectedFlightId = flights[0].id;
+                logActivity(`Removed flight ${removed.flightNo} from schedule`);
+                showToast(`Flight ${removed.flightNo} removed`);
+                renderFlightsTable();
+                renderRunwaysAndGates();
+                renderBaggageAndServices();
+            }
+        }
+
+        // TAB 2: PASSENGERS TABLE
+        function populateFlightDropdowns() {
+            const filterEl = document.getElementById('pax-flight-filter');
+            const modalSelect = document.getElementById('new-p-flight');
+            const currentFilter = filterEl ? filterEl.value : 'ALL';
+
+            if (filterEl) {
+                filterEl.innerHTML = `<option value="ALL">Filter by Flight: All Flights</option>` +
+                    flights.map(f => `<option value="${f.flightNo}" ${currentFilter === f.flightNo ? 'selected' : ''}>${f.flightNo} (${f.route})</option>`).join('');
+            }
+            if (modalSelect) {
+                modalSelect.innerHTML = flights.map(f => `<option value="${f.flightNo}">${f.flightNo} • ${f.route}</option>`).join('');
+            }
+        }
+
+        function renderPassengersTable() {
+            const tbody = document.getElementById('passengers-tbody');
+            const search = document.getElementById('pax-search').value.toLowerCase().trim();
+            const flightFilter = document.getElementById('pax-flight-filter').value;
+
+            const filtered = passengers.filter(p => {
+                const matchSearch = !search ||
+                    p.name.toLowerCase().includes(search) ||
+                    p.pnr.toLowerCase().includes(search) ||
+                    p.flightNo.toLowerCase().includes(search);
+                const matchFlight = flightFilter === 'ALL' || p.flightNo === flightFilter;
+                return matchSearch && matchFlight;
+            });
+
+            tbody.innerHTML = filtered.map(p => `
+                <tr class="hover:bg-sky-canvas/70 transition">
+                    <td class="py-3 px-4 font-mono font-bold text-sky-blue">${p.pnr}</td>
+                    <td class="py-3 px-4 font-bold text-sky-navy text-sm">${p.name}</td>
+                    <td class="py-3 px-4 font-mono font-bold text-sky-navy">${p.flightNo}</td>
+                    <td class="py-3 px-4 text-sky-textMuted font-semibold">${p.route}</td>
+                    <td class="py-3 px-4">
+                        <span class="font-mono font-bold text-sky-navy">Seat ${p.seat}</span>
+                        <span class="text-xs text-sky-textMuted ml-1">(${p.cabin})</span>
+                    </td>
+                    <td class="py-3 px-4 text-sky-navy">${p.bags}</td>
+                    <td class="py-3 px-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-extrabold border ${getStatusStyle(p.status)}">${p.status}</span>
+                    </td>
+                    <td class="py-3 px-4 text-right space-x-1.5">
+                        <button onclick="advancePassengerStatus(${p.id})" class="bg-sky-blue hover:bg-sky-blueHover text-white font-bold px-3 py-1 rounded-lg text-xs transition">
+                            ${p.status === 'Booked' ? 'Check-In Passenger' : (p.status === 'Checked-In' ? 'Mark Boarded' : 'Reset Status')}
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            updateKpis();
+        }
+
+        function advancePassengerStatus(paxId) {
+            const p = passengers.find(item => item.id === paxId);
+            if (!p) return;
+            if (p.status === 'Booked') p.status = 'Checked-In';
+            else if (p.status === 'Checked-In') p.status = 'Boarded';
+            else p.status = 'Booked';
+
+            logActivity(`Passenger ${p.name} (${p.flightNo}) status -> ${p.status}`);
+            showToast(`${p.name} is now ${p.status}`);
+            renderPassengersTable();
+        }
+
+        // TAB 3: RUNWAYS & GATES
+        function renderRunwaysAndGates() {
+            const rGrid = document.getElementById('runways-grid');
+            rGrid.innerHTML = runways.map(r => {
+                const isOpen = r.status === 'OPEN';
+                const assignedFlights = flights.filter(f => f.runway === r.name);
+                return `
+                <div class="rounded-xl p-4 border-2 ${isOpen ? 'border-sky-teal bg-[#E6F6F5]/30' : 'border-sky-amber bg-[#FFF2EE]/40'} flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span class="font-extrabold text-sky-navy text-base">${r.name}</span>
+                            <span class="text-xs font-mono font-extrabold px-2.5 py-1 rounded-full ${isOpen ? 'bg-sky-teal text-white' : 'bg-sky-amber text-white'}">${r.status}</span>
+                        </div>
+                        <p class="text-xs text-sky-textMuted mt-1">${r.mode} • Length: ${r.length}</p>
+
+                        <div class="mt-3 pt-3 border-t border-slate-200/80">
+                            <div class="text-xs font-bold text-sky-navy mb-1.5">Assigned Flights (${assignedFlights.length}):</div>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${assignedFlights.length ? assignedFlights.map(f => `<span class="px-2 py-0.5 rounded bg-sky-navy text-white font-mono text-xs font-bold">${f.flightNo} (${f.time})</span>`).join('') : '<span class="text-xs text-sky-textMuted">No flights currently assigned</span>'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="toggleRunway('${r.id}')" class="mt-4 w-full py-2 rounded-lg font-bold text-xs transition ${isOpen ? 'bg-sky-navy hover:bg-sky-navyLight text-white' : 'bg-sky-teal hover:bg-[#008f82] text-white'}">
+                        ${isOpen ? 'Put Runway on Maintenance Hold' : 'Re-Open Runway for Flights'}
+                    </button>
+                </div>`;
+            }).join('');
+
+            const gGrid = document.getElementById('gates-grid');
+            gGrid.innerHTML = allGates.map(gateName => {
+                const occupying = flights.find(f => f.gate === gateName && f.status !== 'Departed' && f.status !== 'Cancelled');
+                return `
+                <div class="p-4 rounded-xl border ${occupying ? 'bg-white border-sky-blue shadow-sm' : 'bg-sky-canvas/60 border-slate-200'}">
+                    <div class="flex items-center justify-between">
+                        <span class="font-mono font-extrabold text-xs px-2.5 py-1 rounded bg-sky-navy text-white">${gateName}</span>
+                        <span class="text-xs font-bold ${occupying ? 'text-sky-blue' : 'text-sky-teal'}">${occupying ? 'OCCUPIED' : 'AVAILABLE'}</span>
+                    </div>
+                    ${occupying ? `
+                        <div class="mt-3">
+                            <div class="font-mono font-extrabold text-sky-navy text-sm">${occupying.flightNo} • ${occupying.airline}</div>
+                            <div class="text-xs text-sky-blue font-semibold">${occupying.route}</div>
+                            <div class="text-xs text-sky-textMuted mt-1">Departs: ${occupying.time} (${occupying.status})</div>
+                        </div>
+                    ` : `
+                        <div class="mt-3 text-xs text-sky-textMuted py-2">
+                            Gate is empty and ready for next aircraft assignment.
+                        </div>
+                    `}
+                </div>`;
+            }).join('');
+
+            updateKpis();
+        }
+
+        function toggleRunway(rId) {
+            const r = runways.find(item => item.id === rId);
+            if (!r) return;
+            r.status = r.status === 'OPEN' ? 'MAINTENANCE' : 'OPEN';
+            logActivity(`${r.name} status changed to ${r.status}`);
+            showToast(`${r.name} is now ${r.status}`);
+            renderRunwaysAndGates();
+        }
+
+        // TAB 4: BAGGAGE & GROUND SERVICES
+        function renderBaggageAndServices() {
+            const beltEl = document.getElementById('baggage-belts-list');
+            beltEl.innerHTML = flights.map(f => `
+                <div class="p-3.5 rounded-xl bg-sky-canvas border border-slate-200 flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-3">
+                        <span class="px-3 py-1.5 rounded-lg bg-sky-blue text-white font-mono font-bold">${f.belt}</span>
+                        <div>
+                            <div class="font-bold text-sky-navy text-sm">${f.flightNo} (${f.airline})</div>
+                            <div class="text-sky-textMuted">${f.route} • ${f.type}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-bold text-sky-teal">${f.booked} Passenger Bags</span>
+                        <div class="text-sky-textMuted">${f.services.baggage ? 'Loaded / Active' : 'Loading in Progress'}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            const prepEl = document.getElementById('ground-prep-list');
+            prepEl.innerHTML = flights.map(f => {
+                const doneCount = Object.values(f.services).filter(Boolean).length;
+                const pct = doneCount * 25;
+                return `
+                <div class="p-3.5 rounded-xl bg-sky-canvas border border-slate-200 text-xs">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="font-bold text-sky-navy text-sm">${f.flightNo} at ${f.gate} (${f.route})</span>
+                        <span class="font-mono font-bold ${pct === 100 ? 'text-sky-teal' : 'text-sky-blue'}">${pct}% Ready</span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden mb-2">
+                        <div class="h-full ${pct === 100 ? 'bg-sky-teal' : 'bg-sky-blue'}" style="width:${pct}%"></div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 text-[11px]">
+                        <span class="px-2 py-0.5 rounded ${f.services.fuel ? 'bg-sky-teal text-white' : 'bg-slate-200 text-slate-600'}">Fueling</span>
+                        <span class="px-2 py-0.5 rounded ${f.services.catering ? 'bg-sky-teal text-white' : 'bg-slate-200 text-slate-600'}">Food Catering</span>
+                        <span class="px-2 py-0.5 rounded ${f.services.baggage ? 'bg-sky-teal text-white' : 'bg-slate-200 text-slate-600'}">Luggage</span>
+                        <span class="px-2 py-0.5 rounded ${f.services.cleaning ? 'bg-sky-teal text-white' : 'bg-slate-200 text-slate-600'}">Cabin Cleaning</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // TAB 5: SQL & JAVA CODE FOR PRESENTATION
+        function showCodeTab(mode) {
+            const box = document.getElementById('code-display-area');
+            if (mode === 'sql_tables') {
+                box.innerHTML = `
+                <pre class="bg-sky-navy text-slate-100 p-4 rounded-xl font-mono text-xs overflow-x-auto leading-relaxed">-- AirportOperationsPro MySQL Database Schema
+CREATE TABLE flights (
+    flight_id INT PRIMARY KEY AUTO_INCREMENT,
+    flight_no VARCHAR(10) NOT NULL,
+    airline VARCHAR(50) NOT NULL,
+    flight_type ENUM('Departure', 'Arrival') NOT NULL,
+    route VARCHAR(60) NOT NULL,
+    scheduled_time VARCHAR(20) NOT NULL,
+    gate_no VARCHAR(15) NOT NULL,
+    runway_name VARCHAR(30) NOT NULL,
+    status VARCHAR(20) DEFAULT 'On Time'
+);
+
+CREATE TABLE passengers (
+    passenger_id INT PRIMARY KEY AUTO_INCREMENT,
+    pnr_no VARCHAR(15) UNIQUE NOT NULL,
+    full_name VARCHAR(80) NOT NULL,
+    flight_no VARCHAR(10) NOT NULL,
+    seat_no VARCHAR(5) NOT NULL,
+    ticket_class VARCHAR(20) DEFAULT 'Economy',
+    boarding_status VARCHAR(20) DEFAULT 'Booked'
+);</pre>`;
+            } else if (mode === 'sql_reports') {
+                box.innerHTML = `
+                <div class="bg-sky-navy text-sky-teal p-3 rounded-lg font-mono text-xs mb-3">
+                    SELECT f.flight_no, f.airline, f.route, f.gate_no, COUNT(p.passenger_id) AS checked_in_passengers FROM flights f LEFT JOIN passengers p ON f.flight_no = p.flight_no GROUP BY f.flight_no;
+                </div>
+                <table class="w-full text-left text-xs font-mono border-collapse">
+                    <thead><tr class="bg-sky-navyLight text-white"><th class="p-2.5">FLIGHT NO</th><th class="p-2.5">AIRLINE</th><th class="p-2.5">ROUTE</th><th class="p-2.5">GATE</th><th class="p-2.5">STATUS</th></tr></thead>
+                    <tbody class="divide-y divide-slate-200">
+                        ${flights.map(f => `<tr><td class="p-2.5 font-bold">${f.flightNo}</td><td class="p-2.5">${f.airline}</td><td class="p-2.5">${f.route}</td><td class="p-2.5">${f.gate}</td><td class="p-2.5 font-bold text-sky-blue">${f.status}</td></tr>`).join('')}
+                    </tbody>
+                </table>`;
+            } else {
+                box.innerHTML = `
+                <pre class="bg-sky-navy text-slate-100 p-4 rounded-xl font-mono text-xs overflow-x-auto leading-relaxed">package com.areen.airport;
+
+import java.awt.Color;
+import javax.swing.UIManager;
+
+public class AirportOperationsSystem {
+    // Skyscanner-Inspired Color Theme Constants for Java Swing
+    public static final Color SKY_NAVY   = new Color(5, 32, 60);     // #05203C Top Header & Sidebar
+    public static final Color SKY_BLUE   = new Color(0, 98, 227);    // #0062E3 Primary Buttons & Highlights
+    public static final Color SKY_TEAL   = new Color(0, 166, 152);   // #00A698 On-Time & Boarding Badges
+    public static final Color SKY_CANVAS = new Color(241, 242, 248); // #F1F2F8 Light App Background
+    public static final Color SKY_AMBER  = new Color(255, 123, 89);  // #FF7B59 Delayed Warning
+    public static final Color SKY_DANGER = new Color(231, 8, 102);   // #E70866 Cancelled Alert
+}</pre>`;
+            }
+        }
+
+        // UPDATE TOP KPI CARDS
+        function updateKpis() {
+            document.getElementById('kpi-flights').textContent = flights.length;
+            const deps = flights.filter(f => f.type === 'Departure').length;
+            const arrs = flights.filter(f => f.type === 'Arrival').length;
+            document.getElementById('kpi-flights-sub').textContent = `${deps} Departures • ${arrs} Arrivals`;
+
+            const totalBooked = flights.reduce((acc, f) => acc + f.booked, 0);
+            document.getElementById('kpi-passengers').textContent = totalBooked.toLocaleString();
+            document.getElementById('kpi-checkedin-sub').textContent = `${passengers.length} VIP / Tracked PNR Records`;
+
+            const openRwys = runways.filter(r => r.status === 'OPEN').length;
+            document.getElementById('kpi-runways').textContent = `${openRwys} / ${runways.length}`;
+
+            const usedGates = new Set(flights.filter(f => f.status !== 'Departed' && f.status !== 'Cancelled').map(f => f.gate)).size;
+            document.getElementById('kpi-gates').textContent = `${usedGates} / ${allGates.length}`;
+
+            const delayedCount = flights.filter(f => f.status === 'Delayed' || f.status === 'Cancelled').length;
+            document.getElementById('kpi-delays').textContent = delayedCount;
+        }
+
+        // NAVIGATION SWITCHER
+        function switchTab(tab) {
+            ['flights', 'passengers', 'runways', 'baggage', 'code'].forEach(t => {
+                document.getElementById('view-' + t).classList.add('hidden');
+                const btn = document.getElementById('tab-' + t);
+                btn.className = 'px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition flex items-center gap-2';
+            });
+            document.getElementById('view-' + tab).classList.remove('hidden');
+            document.getElementById('tab-' + tab).className = 'px-3.5 py-2 rounded-lg text-xs font-bold bg-sky-blue text-white transition flex items-center gap-2 shadow-sm';
+        }
+
+        // MODALS
+        function openFlightModal() {
+            document.getElementById('flight-modal').classList.remove('hidden');
+            document.getElementById('flight-modal').classList.add('flex');
+        }
+        function closeFlightModal() {
+            document.getElementById('flight-modal').classList.add('hidden');
+            document.getElementById('flight-modal').classList.remove('flex');
+        }
+        function openPassengerModal() {
+            populateFlightDropdowns();
+            document.getElementById('passenger-modal').classList.remove('hidden');
+            document.getElementById('passenger-modal').classList.add('flex');
+        }
+        function closePassengerModal() {
+            document.getElementById('passenger-modal').classList.add('hidden');
+            document.getElementById('passenger-modal').classList.remove('flex');
+        }
+
+        function handleAddFlight(e) {
+            e.preventDefault();
+            const type = document.getElementById('new-f-type').value;
+            const airline = document.getElementById('new-f-airline').value;
+            const flightNo = document.getElementById('new-f-no').value.toUpperCase();
+            const route = document.getElementById('new-f-route').value;
+            const timeVal = document.getElementById('new-f-time').value;
+            const gate = document.getElementById('new-f-gate').value;
+            const runway = document.getElementById('new-f-runway').value;
+            const aircraft = document.getElementById('new-f-aircraft').value;
+
+            const newFlight = {
+                id: Date.now(),
+                type, flightNo, airline, route,
+                time: timeVal, gate, runway, aircraft,
+                booked: 120, capacity: 180, belt: 'Belt B1',
+                status: 'On Time',
+                services: { fuel: true, catering: false, baggage: false, cleaning: true }
+            };
+
+            flights.unshift(newFlight);
+            selectedFlightId = newFlight.id;
+            closeFlightModal();
+            logActivity(`Added new ${type} flight ${flightNo} (${route})`);
+            showToast(`Flight ${flightNo} Added Successfully!`);
+            renderFlightsTable();
+            renderRunwaysAndGates();
+            renderBaggageAndServices();
+        }
+
+        function handleAddPassenger(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-p-name').value;
+            const flightNo = document.getElementById('new-p-flight').value;
+            const seat = document.getElementById('new-p-seat').value.toUpperCase();
+            const cabin = document.getElementById('new-p-class').value;
+            const bags = document.getElementById('new-p-bags').value;
+
+            const flt = flights.find(f => f.flightNo === flightNo);
+            if (flt && flt.booked < flt.capacity) flt.booked += 1;
+
+            const pnr = 'PNR-' + Math.floor(1000 + Math.random() * 9000);
+            passengers.unshift({
+                id: Date.now(),
+                pnr, name, flightNo,
+                route: flt ? flt.route : 'Delhi → Mumbai',
+                seat, cabin, bags,
+                status: 'Checked-In'
+            });
+
+            closePassengerModal();
+            logActivity(`Booked passenger ${name} on ${flightNo} (Seat ${seat})`);
+            showToast(`Passenger ${name} Checked-In!`);
+            renderPassengersTable();
+            renderFlightsTable();
+            switchTab('passengers');
+        }
+
+        function logActivity(text) {
+            const feed = document.getElementById('activity-feed');
+            const div = document.createElement('div');
+            div.textContent = `• ${text}`;
+            feed.prepend(div);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            t.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => t.classList.add('opacity-0', 'pointer-events-none'), 2400);
+        }
+
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('live-clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }, 1000);
+
+        window.onload = function () {
+            renderFlightsTable();
+            renderPassengersTable();
+            renderRunwaysAndGates();
+            renderBaggageAndServices();
+            showCodeTab('sql_tables');
+        };
+    </script>
+</body>
+</html>
