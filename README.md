@@ -72,41 +72,5 @@ Maven downloads MySQL Connector/J. No credentials are hard-coded into the source
 9. Choose `10` to export the schedule into an `exports/` CSV file.
 10. Choose `11` to inspect the audit trail.
 
-## Useful SQL for viva
 
-```sql
-USE airport_operations_pro;
-SHOW TABLES;
-SELECT * FROM v_flight_operations LIMIT 20;
-SELECT * FROM v_booking_manifest LIMIT 20;
-SELECT * FROM v_daily_airport_kpis ORDER BY operation_date;
 
--- Route traffic
-SELECT origin_code, destination_code, COUNT(*) AS flight_count
-FROM flights GROUP BY origin_code, destination_code
-ORDER BY flight_count DESC LIMIT 15;
-
--- Occupancy proxy: confirmed bookings by flight (not actual seat occupancy)
-SELECT f.flight_number, f.origin_code, f.destination_code,
-       COUNT(b.booking_id) AS confirmed_bookings
-FROM flights f LEFT JOIN bookings b ON b.flight_id=f.flight_id
-  AND b.booking_status='CONFIRMED'
-GROUP BY f.flight_id ORDER BY confirmed_bookings DESC LIMIT 20;
-
--- Revenue from successful payments
-SELECT DATE(paid_at) AS payment_day, SUM(amount) AS revenue
-FROM payments WHERE payment_status='SUCCESS'
-GROUP BY DATE(paid_at) ORDER BY payment_day;
-
--- Maintenance backlog by severity
-SELECT severity, maintenance_status, COUNT(*) AS total
-FROM maintenance_logs GROUP BY severity, maintenance_status;
-```
-
-## Academic scope and limitations
-
-- The generated names, contact details, schedules, flights, airline mappings and operational statuses are synthetic. The airport name is a project theme, not an official data source.
-- The seed data uses a Jaipur-centered route mix but does not claim to reproduce the actual airport's flight volume, runways, terminals, airlines, or schedule.
-- This is a learning/demo console app, not a production system. Production deployment would require authentication/authorization, secure secret management, seat-inventory locking, booking/payment integration, concurrency controls, validation, monitoring, backups, privacy controls and regulatory review.
-- Demo booking creation records a **pending** payment; it does not charge money. Passenger data entered by the user is written to the local database.
-- The schema's PNRs/ticket numbers are generated for demonstration. Real ticketing and aviation operations require external systems and formal procedures.
