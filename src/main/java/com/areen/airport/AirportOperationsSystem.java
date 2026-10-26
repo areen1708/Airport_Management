@@ -1,5 +1,11 @@
 package com.areen.airport;
 
+import com.areen.airport.domain.CabinClass;
+import com.areen.airport.domain.FlightStatus;
+import com.areen.airport.domain.PassengerProfile;
+import com.areen.airport.domain.flight.FlightService;
+import com.areen.airport.domain.flight.FlightServiceFactory;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -198,36 +204,6 @@ public class AirportOperationsSystem {
         System.out.println("Goodbye.");
     }
 
-    // Abstraction + polymorphism: each flight scope produces its own display description.
-    private abstract static class FlightCategory {
-        private final String origin;
-        private final String destination;
-        protected FlightCategory(String origin, String destination) {
-            this.origin = origin; this.destination = destination;
-        }
-        public String route() { return origin + " -> " + destination; }
-        public abstract String serviceDescription();
-    }
-    private static final class DomesticFlight extends FlightCategory {
-        DomesticFlight(String o, String d) { super(o, d); }
-        public String serviceDescription() { return "Domestic service"; }
-    }
-    private static final class RegionalFlight extends FlightCategory {
-        RegionalFlight(String o, String d) { super(o, d); }
-        public String serviceDescription() { return "Regional connectivity"; }
-    }
-    private static final class InternationalFlight extends FlightCategory {
-        InternationalFlight(String o, String d) { super(o, d); }
-        public String serviceDescription() { return "International service"; }
-    }
-    private static FlightCategory category(String scope, String origin, String destination) {
-        return switch (scope) {
-            case "REGIONAL" -> new RegionalFlight(origin, destination);
-            case "INTERNATIONAL" -> new InternationalFlight(origin, destination);
-            default -> new DomesticFlight(origin, destination);
-        };
-    }
-
     private static void requireRole(String... allowed) {
         for (String role : allowed) if (role.equals(currentRole)) return;
         throw new IllegalStateException("Access denied for role " + currentRole + ".");
@@ -286,7 +262,7 @@ public class AirportOperationsSystem {
     }
 
     private static void printFlight(ResultSet rs) throws SQLException {
-        FlightCategory c = category(rs.getString("flight_scope"), rs.getString("origin_code"), rs.getString("destination_code"));
+        FlightService c = FlightServiceFactory.create(rs.getString("flight_scope"), rs.getString("origin_code"), rs.getString("destination_code"));
         System.out.printf("#%-5d %-8s %-22s %-13s %-15s %-16s %-10s %s %s%n",
                 rs.getLong("flight_id"), rs.getString("flight_number"), trim(rs.getString("airline_name"),22), c.route(),
                 c.serviceDescription(), rs.getTimestamp("scheduled_departure").toLocalDateTime().format(TS),
@@ -519,25 +495,42 @@ public class AirportOperationsSystem {
 
     private static void createPassengerAndBooking() throws SQLException {
         System.out.println("Create a synthetic demo booking. Flight ID can be found from option 2.");
-        String first = readLine("First name: ").trim();
-        String last = readLine("Last name: ").trim();
-        String email = readLine("Email (must be unique): ").trim().toLowerCase();
-        String phone = readLine("Phone: ").trim();
-        String nationality = readLine("Nationality: ").trim();
-        String dob = readLine("DOB YYYY-MM-DD: ").trim();
-        String passportNo = readLine("Passport number (optional; press Enter if not applicable): ").trim();
-        if (passportNo.isEmpty()) passportNo = null;
+        PassengerProfile passenger;
+        try {
+            String first = readLine("First name: ").trim();
+            String last = readLine("Last name: ").trim();
+            String email = readLine("Email (must be unique): ").trim();
+            String phone = readLine("Phone: ").trim();
+            String nationality = readLine("Nationality: ").trim();
+            String dob = readLine("DOB YYYY-MM-DD: ").trim();
+            String passportNo = readLine("Passport number (optional; press Enter if not applicable): ").trim();
+            passenger = PassengerProfile.fromConsoleInput(first, last, email, phone, nationality, dob, passportNo);
+        } catch (IllegalArgumentException ex) {
+            System.out.println(ex.getMessage());
+            return;
+        }
         long flightId = readLong("Flight ID: ");
-        String cabin = readLine("Cabin (ECONOMY/PREMIUM_ECONOMY/BUSINESS/FIRST): ").trim().toUpperCase();
-        if (!cabin.matches("ECONOMY|PREMIUM_ECONOMY|BUSINESS|FIRST")) { System.out.println("Invalid cabin."); return; }
+        CabinClass cabin;
+        try {
+            cabin = CabinClass.fromInput(readLine("Cabin (ECONOMY/PREMIUM_ECONOMY/BUSINESS/FIRST): "));
+        } catch (IllegalArgumentException ex) {
+            System.out.println(ex.getMessage());
+            return;
+        }
         long createdPassengerId = -1;
         connection.setAutoCommit(false);
         try {
             long passengerId;
             String passengerCode = "JAI-" + System.currentTimeMillis();
             try (PreparedStatement ps = connection.prepareStatement("INSERT INTO passengers(passenger_code,first_name,last_name,email,phone,nationality,date_of_birth,passport_no) VALUES(?,?,?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS)) {
-                ps.setString(1, passengerCode); ps.setString(2, first); ps.setString(3, last); ps.setString(4, email); ps.setString(5, phone); ps.setString(6, nationality); ps.setDate(7, Date.valueOf(dob));
-                if (passportNo == null) ps.setNull(8, Types.VARCHAR); else ps.setString(8, passportNo);
+                ps.setString(1, passengerCode);
+                ps.setString(2, passenger.getFirstName());
+                ps.setString(3, passenger.getLastName());
+                ps.setString(4, passenger.getEmail());
+                ps.setString(5, passenger.getPhone());
+                ps.setString(6, passenger.getNationality());
+                ps.setDate(7, Date.valueOf(passenger.getDateOfBirth()));
+                if (passenger.getPassportNumber() == null) ps.setNull(8, Types.VARCHAR); else ps.setString(8, passenger.getPassportNumber());
                 ps.executeUpdate();
                 try (ResultSet keys = ps.getGeneratedKeys()) { keys.next(); passengerId = keys.getLong(1); }
             }
@@ -545,7 +538,7 @@ public class AirportOperationsSystem {
             String pnr = generatePnr();
             long bookingId;
             try (PreparedStatement ps = connection.prepareStatement("INSERT INTO bookings(pnr,passenger_id,flight_id,cabin_class,booking_status,total_fare) VALUES(?,?,?,?,'CONFIRMED',?)", Statement.RETURN_GENERATED_KEYS)) {
-                ps.setString(1,pnr); ps.setLong(2,passengerId); ps.setLong(3,flightId); ps.setString(4,cabin); ps.setBigDecimal(5,fare.value); ps.executeUpdate();
+                ps.setString(1,pnr); ps.setLong(2,passengerId); ps.setLong(3,flightId); ps.setString(4,cabin.name()); ps.setBigDecimal(5,fare.value); ps.executeUpdate();
                 try (ResultSet keys=ps.getGeneratedKeys()) { keys.next(); bookingId=keys.getLong(1); }
             }
             try (PreparedStatement ps=connection.prepareStatement("INSERT INTO tickets(booking_id,ticket_number,seat_number,check_in_status,baggage_kg) VALUES(?,?,NULL,'NOT_CHECKED_IN',0)")) {
@@ -597,20 +590,25 @@ public class AirportOperationsSystem {
 
     private static void updateFlightStatus() throws SQLException {
         long id=readLong("Flight ID: ");
-        String status=readLine("New status (SCHEDULED/BOARDING/DEPARTED/ARRIVED/DELAYED/CANCELLED/DIVERTED): ").trim().toUpperCase();
-        if (!status.matches("SCHEDULED|BOARDING|DEPARTED|ARRIVED|DELAYED|CANCELLED|DIVERTED")) { System.out.println("Invalid status."); return; }
+        FlightStatus status;
+        try {
+            status = FlightStatus.fromInput(readLine("New status (SCHEDULED/BOARDING/DEPARTED/ARRIVED/DELAYED/CANCELLED/DIVERTED): "));
+        } catch (IllegalArgumentException ex) {
+            System.out.println(ex.getMessage());
+            return;
+        }
+        String statusValue = status.name();
         String sql="UPDATE flights SET status=?, actual_departure=CASE WHEN ?='DEPARTED' AND actual_departure IS NULL THEN NOW() ELSE actual_departure END, actual_arrival=CASE WHEN ?='ARRIVED' AND actual_arrival IS NULL THEN NOW() ELSE actual_arrival END WHERE flight_id=?";
         try (PreparedStatement ps=connection.prepareStatement(sql)) {
-            ps.setString(1,status); ps.setString(2,status); ps.setString(3,status); ps.setLong(4,id);
+            ps.setString(1,statusValue); ps.setString(2,statusValue); ps.setString(3,statusValue); ps.setLong(4,id);
             int rows=ps.executeUpdate();
             if (rows==1) {
                 try (PreparedStatement ev=connection.prepareStatement("INSERT INTO flight_events(flight_id,event_type,event_note) VALUES(?,?,?)")) {
-                    String event = status.equals("DEPARTED") ? "DEPARTED" : status.equals("ARRIVED") ? "ARRIVED" : status.equals("CANCELLED") ? "CANCELLED" : status.equals("DELAYED") ? "DELAYED" : "STATUS_UPDATED";
-                    ev.setLong(1,id); ev.setString(2,event); ev.setString(3,"Status changed to "+status+" by "+currentUser); ev.executeUpdate();
+                    ev.setLong(1,id); ev.setString(2,status.toEventType()); ev.setString(3,"Status changed to "+statusValue+" by "+currentUser); ev.executeUpdate();
                 }
                 System.out.println("Flight status updated.");
             } else System.out.println("Flight ID not found.");
-            audit("UPDATE_FLIGHT_STATUS", "flights", String.valueOf(id), "New status="+status);
+            audit("UPDATE_FLIGHT_STATUS", "flights", String.valueOf(id), "New status="+statusValue);
         }
     }
 

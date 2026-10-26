@@ -8,7 +8,7 @@ A Java 17 + MySQL 8 project for a second-year BTech CSE portfolio. The database 
 - Seed procedure creates 120 aircraft, 150 pilots, 3,000 passengers, 4,000 flights, 6,000 bookings, tickets/payments, baggage, maintenance records and flight event history.
 - SQL views for flight operations, booking manifest and daily KPIs.
 - Java JDBC console with sign-in and role-based menus: customer-service registration, admin bootstrap using an environment secret, PBKDF2 password hashing, KPI dashboard, flight search, today's operations, passenger search with full-profile view/edit (name, email, phone, nationality, date of birth and optional passport number), PNR lookup, transactional booking creation, check-in, flight-status updates with event history, maintenance overview, CSV export and audit log.
-- Demonstrates OOP abstraction, inheritance and polymorphism; encapsulated private state in model classes; prepared statements; transaction commit/rollback; try/catch; file handling.
+- Demonstrates OOP abstraction, inheritance and polymorphism through dedicated domain models (`Person`, `PassengerProfile`, flight service hierarchy, enums for cabin/status); encapsulated private state in model classes; prepared statements; transaction commit/rollback; try/catch; file handling.
 
 ## Requirements
 
@@ -71,6 +71,5 @@ Maven downloads MySQL Connector/J. No credentials are hard-coded into the source
 8. Choose `9` for unresolved aircraft maintenance.
 9. Choose `10` to export the schedule into an `exports/` CSV file.
 10. Choose `11` to inspect the audit trail.
-
 
 
